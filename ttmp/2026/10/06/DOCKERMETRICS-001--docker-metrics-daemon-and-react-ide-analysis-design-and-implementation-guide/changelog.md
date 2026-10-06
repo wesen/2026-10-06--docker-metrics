@@ -43,3 +43,12 @@ Phase 3: WebSocket hub with topics/backpressure, REST API, Prometheus registry, 
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/httpapi/server.go — HTTP/WebSocket/Prometheus server
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/hub/hub.go — WebSocket hub
+
+## 2026-10-06
+
+Phase 4: React + TypeScript IDE with atomic design, Redux Toolkit, RTK Query and a live WebSocket stream; embedded into the Go binary via go:embed.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/httpapi/static.go — Embedded SPA serving
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/app/api.ts — RTK Query API client

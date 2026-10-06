@@ -504,3 +504,90 @@ React app (Phase 4) has a real backend.
 ### Technical details
 - Topics: `fleet`, `container:<name>`, `events`, `run:<id>`.
 - Outbound buffer 256; ping every 30s; write timeout 10s.
+
+## Step 13: Phase 4 — React IDE (atomic design + RTK Query) (ump)
+
+This step builds the frontend: a Vite + React + TypeScript app organised by
+atomic design (atoms/molecules/organisms), with Redux Toolkit for UI and stream
+state and RTK Query for the REST API. The CSS tokens and layout classes are
+ported verbatim from the prototype so the look is unchanged. The build is
+embedded into the Go binary.
+
+### Prompt Context
+**User prompt (verbatim):** see Step 10 — "use react with atom/molecule/organism
+design system, reuse existing design, use redux / rtk-query if necessary".
+**Assistant interpretation:** Rebuild the prototype's UI as a real React app with
+atomic structure and RTK Query, keeping the prototype's visual identity.
+**Inferred user intent:** A maintainable frontend that talks to the real backend,
+not a CDN-loaded single file.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- `web/`: Vite + React 18 + TS. `vite.config.ts` proxies `/api` and `/ws` to
+  `:8080` in dev.
+- `web/src/theme/global.css`: design tokens and classes copied from the
+  prototype's `<style>`.
+- `web/src/app/`: `types.ts`, `api.ts` (RTK Query: containers, hosts, samples,
+  dashboards CRUD, run/stop), `uiSlice.ts` (source/preset/tab/selection),
+  `streamSlice.ts` (fleet frame, events, logs, run status), `store.ts`.
+- `web/src/hooks/useStream.ts`: reconnecting WebSocket client that subscribes to
+  `fleet`, `events` and the active `run:<id>` topic and dispatches frames.
+- `web/src/atoms/`: Button, Dot/Badge/Chip, Select/Segmented, StatBar/Spark.
+- `web/src/molecules/`: ContainerCard, ConsoleLine, EventRow, CodeEditor.
+- `web/src/organisms/`: TopBar, FleetGrid, ConsolePanel, EventsPanel,
+  ChartsPanel (SVG), SinksPanel, PresetDrawer.
+- `web/src/routes/`: Dashboard (`/`) and Ide (`/ide`), selected by pathname.
+- `web/src/presets/index.ts`: 13 presets ported from the prototype.
+- Embedding: `pkg/httpapi/static.go` (`//go:embed all:dist`) with disk-first
+  serving via `--static-dir`; `make build-web` builds and stages `web/dist` into
+  `pkg/httpapi/dist`.
+- `.gitignore` ignores `web/node_modules`, `web/dist`; `pkg/httpapi/dist` is
+  committed so `go build` works from a clean checkout.
+
+### Why
+- Atomic design keeps the prototype's visual components small and reusable.
+- RTK Query handles polling, caching and mutations without hand-written fetch
+  code; Redux holds cross-panel state (selection, active run, stream frames).
+
+### What worked
+- `pnpm typecheck` passes; `pnpm build` produced
+  `dist/assets/index-*.js` (243 kB) + CSS (7.8 kB).
+- `go build ./...` and `go test ./...` pass with the embedded dist.
+- Live serve with `--static-dir ""`: `/` served the embedded SPA, `/ide`
+  returned the index fallback (200 text/html), `/assets/index-*.js` served with
+  `text/javascript`, `/api/v1/containers` returned live data.
+
+### What didn't work
+- `pnpm install` finished with `ERR_PNPM_IGNORED_BUILDS` for `esbuild`. The
+  "pnpm" field in package.json is no longer read; the setting moved to
+  `pnpm-workspace.yaml`. Even then pnpm still errored, but the installed esbuild
+  binary worked and `pnpm build` succeeded. Recorded as an environment quirk;
+  the build is what matters.
+- `tsc` flagged unused `useState`/`setPane`; removed the dead pane state.
+
+### What I learned
+- `http.ServeFile` cannot serve an `embed.FS`; `http.FileServer(http.FS(...))`
+  plus an explicit index fallback is the correct pattern for an embedded SPA.
+
+### What was tricky to build
+- Keeping the WebSocket reconnect loop and the `run:<id>` subscription in sync:
+  the hook reconnects when the run id changes so a new run gets its own topic.
+
+### What warrants a second pair of eyes
+- Committing `pkg/httpapi/dist` means stale assets are possible; the release
+  process should run `make build-web` before tagging.
+- `InsecureSkipVerify` on WS accept and no auth: fine for localhost only.
+
+### What should be done in the future
+- Add Vitest component tests and a Playwright smoke test that runs a preset.
+- Add a dashboard save/load UI wired to the dashboards endpoints.
+
+### Code review instructions
+- Start at `web/src/app/api.ts`, `web/src/hooks/useStream.ts`,
+  `web/src/organisms/FleetGrid.tsx`, `pkg/httpapi/static.go`.
+- Validate: `cd web && pnpm typecheck && pnpm build`, then `make build-all` and
+  `./dist/docker-metrics serve`.
+
+### Technical details
+- Route split is by `window.location.pathname` (`/ide` → IDE).
+- Dev proxy target: `127.0.0.1:8080`.

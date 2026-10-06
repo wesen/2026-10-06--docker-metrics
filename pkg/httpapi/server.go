@@ -9,10 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -256,30 +253,6 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	io.WriteString(w, s.prom.render())
-}
-
-func (s *Server) handleStatic(w http.ResponseWriter, r *http.Request) {
-	dir := s.cfg.StaticDir
-	if dir == "" {
-		s.serveFallback(w, r)
-		return
-	}
-	clean := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
-	if clean == "." {
-		clean = "index.html"
-	}
-	full := filepath.Join(dir, clean)
-	if info, err := os.Stat(full); err == nil && !info.IsDir() {
-		http.ServeFile(w, r, full)
-		return
-	}
-	// SPA fallback: /ide and other routes serve index.html.
-	index := filepath.Join(dir, "index.html")
-	if _, err := os.Stat(index); err == nil {
-		http.ServeFile(w, r, index)
-		return
-	}
-	s.serveFallback(w, r)
 }
 
 func (s *Server) serveFallback(w http.ResponseWriter, r *http.Request) {

@@ -1,4 +1,4 @@
-.PHONY: all gifs lint lintmax golangci-lint-install glazed-lint-build glazed-lint test build build-bin fmt-check clean tidy docker-lint gosec govulncheck logcopter-generate logcopter-check goreleaser tag-major tag-minor tag-patch release bump-go-go-golems install
+.PHONY: all gifs lint lintmax golangci-lint-install glazed-lint-build glazed-lint test build build-bin build-web fmt-check clean tidy docker-lint gosec govulncheck logcopter-generate logcopter-check goreleaser tag-major tag-minor tag-patch release bump-go-go-golems install
 
 BINARY ?= docker-metrics
 MODULE ?= github.com/go-go-golems/docker-metrics
@@ -64,6 +64,16 @@ build:
 build-bin:
 	mkdir -p ./dist
 	GOWORK=off go build -o ./dist/$(BINARY) $(CMD_DIR)
+
+# Build the React frontend and stage it for go:embed.
+build-web:
+	cd web && pnpm install && pnpm build
+	rm -rf pkg/httpapi/dist
+	mkdir -p pkg/httpapi/dist
+	cp -R web/dist/. pkg/httpapi/dist/
+
+# Full single-binary build: frontend first, then the Go binary.
+build-all: build-web build-bin
 
 clean:
 	rm -rf ./dist ./.bin
