@@ -1,6 +1,7 @@
 import { useRunSourceMutation, useStopRunMutation } from "../app/api";
 import { useAppDispatch, useAppSelector } from "../app/store";
 import { clearLogs, setRunStatus } from "../app/streamSlice";
+import { clearSnapshots } from "../app/dashboardSlice";
 import { setPreset, setRunId, setSource, setTab, togglePreset, closePreset, type Tab } from "../app/uiSlice";
 import { Button } from "../atoms/Button";
 import { useStream } from "../hooks/useStream";
@@ -34,8 +35,19 @@ export function Ide() {
   useStream(runId ? `run:${runId}` : null, ["dash:latest"]);
 
   const run = async () => {
+    // One run at a time: a previous run's streams and dashboard would keep
+    // publishing to dash:latest and overwrite the new board.
+    if (runId) {
+      try {
+        await stopRun(runId);
+      } catch {
+        // already gone
+      }
+    }
     dispatch(clearLogs());
+    dispatch(clearSnapshots());
     dispatch(setRunStatus({ status: "running" }));
+    if (/\bdashboard\s*\(/.test(source)) dispatch(setTab("dashboard"));
     try {
       const res = await runSource({ source }).unwrap();
       dispatch(setRunId(res.runId));
