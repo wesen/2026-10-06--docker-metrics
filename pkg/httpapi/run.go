@@ -76,6 +76,10 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 		Publish: func(t string, frame map[string]any) {
 			s.cfg.Hub.Publish(t, hub.Frame{T: int64Of(frame["t"]), Data: mapOf(frame["data"]), Value: frame["value"]})
 		},
+		PublishSnapshot: func(id string, snap map[string]any) {
+			s.cfg.Hub.Publish("dash:"+id, hub.Frame{Type: "snapshot", Value: snap})
+			s.cfg.Hub.Publish("dash:latest", hub.Frame{Type: "snapshot", Value: snap})
+		},
 		Event: func(name string, payload map[string]any) {
 			s.RecordEvent("emit", name, stringOf(payload["container"]), stringOf(payload["rule"]))
 			s.cfg.Hub.Publish("events", hub.Frame{Type: "event", Kind: "emit", Rule: name})

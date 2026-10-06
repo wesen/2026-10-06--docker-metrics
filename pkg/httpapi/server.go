@@ -126,6 +126,10 @@ func (s *Server) StartDefaultDashboard(ctx context.Context) error {
 		Publish: func(topic string, frame map[string]any) {
 			s.cfg.Hub.Publish(topic, hub.Frame{T: int64Of(frame["t"]), Data: mapOf(frame["data"])})
 		},
+		PublishSnapshot: func(id string, snap map[string]any) {
+			s.cfg.Hub.Publish("dash:"+id, hub.Frame{Type: "snapshot", Value: snap})
+			s.cfg.Hub.Publish("dash:latest", hub.Frame{Type: "snapshot", Value: snap})
+		},
 		Sink: func(kind string, opts, payload map[string]any) {
 			if kind == "prometheus" {
 				s.prom.ingest(opts, payload)

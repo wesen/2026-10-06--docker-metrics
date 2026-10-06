@@ -1123,3 +1123,95 @@ to the investigation format").
   Technical details.
 - Deferred design (not implemented): panel value evaluation reuses the existing
   `Stream` machinery; `ws(topic)` already exists and needs no engine change.
+
+## Step 17: Phase B — backend dashboard DSL and snapshot publishing
+
+The user shipped a v2 prototype with a JS dashboard API and a JSON widget
+interpreter, and asked to implement it. This step ports the dashboard DSL into
+the backend prelude and publishes snapshots over the WebSocket.
+
+### Prompt Context
+**User prompt (verbatim):** "Ok, we downloaded a new verison with a JS API to
+build dashboards, I like your JSON interpreter on the react side approach,
+Import the new version \"~/Downloads/dockermetrics-ide (2).html\". Create a new
+design doc in the same style as the first. ... Store in the ticket and upload to
+remarkable. Then implement, btw commit at appropriate intervals and keep a
+detailed diary as you work".
+**Assistant interpretation:** Port the v2 dashboard DSL (`dashboard()`, fifteen
+widgets) to the go-go-goja prelude, compile dashboards to JSON snapshots, and
+publish them for a React interpreter to draw.
+**Inferred user intent:** User-authored dashboards that render in the browser
+without the browser containing any metric logic.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- Imported the v2 prototype to `sources/local/dockermetrics-ide-v2.html`; wrote
+  `design-doc/02-dashboard-dsl-and-widget-interpreter-v2.md`; uploaded it to
+  reMarkable (`OK: uploaded DOCKERMETRICS-001 Dashboard DSL Guide v2.pdf`).
+- Added to `pkg/runtime/prelude/engine.js`: `eventLog`/`logEvent`, `slug`,
+  `jsonSafe`, `maxOf`/`minOf`, `rawOf`, `leaves`, `flatVals`, `avgPts`,
+  `stateOf`, `isOpts`, `DEFSPAN`, `wmods`, `entriesOf`, `scalarOf`, `asSpecs`,
+  `class Widget` (15 compute branches), the widget factories, `events`/`text`/`kv`,
+  `class Dashboard` (`var`, `range`, `every`, `section`, `row`, `setVar`,
+  `setRange`, `refresh`, `show`, `stop`, `snapshot`) and `dashboard(title, opts)`.
+  Exported all of them on the `api` object.
+- `pkg/runtime/module.go`: `Options.PublishSnapshot` and the `publishSnapshot`
+  native export.
+- `pkg/httpapi/run.go` and `server.go`: wired `PublishSnapshot` to hub topics
+  `dash:<id>` and `dash:latest`.
+- `testdata/dashboards/dash-basic.js` and `TestDashboardSnapshot`.
+
+### Why
+- The metric engine was already ported (Phase 2), so `Widget.compute` needed
+  only data-source swaps: `world.t` to `now()`, `engine.add` to the prelude item
+  registry, `world.board` to a hub publish.
+- Snapshots are published on both the dashboard-specific topic and `dash:latest`
+  so the IDE can follow the most recent board without knowing its id.
+
+### What worked
+- `go test ./... -count=1` green; `TestDashboardSnapshot` asserts the snapshot
+  has a section plus two rows and all twelve widget types.
+- Live: `POST /api/v1/run` with `dash-basic.js` produced a snapshot frame with
+  `rows=4` and widget types `stat, gauge, kv, line, top, table, donut, grid,
+  sparks, histogram, events, text`.
+
+### What didn't work
+- The first live run published nothing and the daemon logged
+  `publish marshal failed ... unsupported type: func(goja.FunctionCall) goja.Value`.
+  Cause: widget `opts` contains comparator objects (`warn: gt(60)`), and a goja
+  comparator exports to Go as a function, which `json.Marshal` rejects. Fixed by
+  adding `jsonSafe()` in the prelude and sanitising the snapshot before
+  `publishSnapshot`; `o` is now `{"unit":"%"}` and the frame marshals.
+- The initial `show()` published before the async `refresh()` had completed, so
+  `this.snap` was still null. Fixed by publishing inside `refresh().then(...)`.
+
+### What I learned
+- Anything that crosses the JS→Go→JSON boundary must be plain data. Snapshot
+  sanitisation is a contract, not an optimisation.
+
+### What was tricky to build
+- Keeping the prototype's semantics while removing browser-only dependencies
+  (`world`, `engine`, `performance.now`). The `refresh()` guard now uses
+  `Date.now()`; the event widget reads a prelude-local ring fed by `emit`/rules.
+
+### What warrants a second pair of eyes
+- `jsonSafe` drops any object that is a Metric/Pred/Group/Widget/Dashboard or a
+  modifier/comparator; confirm no legitimate widget data is a plain object with
+  one of those marker keys.
+- The `dash:latest` mirror means every board also writes to one shared topic;
+  confirm that is acceptable with several boards live.
+
+### What should be done in the future
+- Frontend interpreter (Phase C): port the `WR` widget registry and the
+  `/d/<id>` route.
+- Persist the JS source so a saved board can be re-run after a restart.
+
+### Code review instructions
+- Start at the `dashboard DSL` block in `pkg/runtime/prelude/engine.js` and
+  `Options.PublishSnapshot` in `pkg/runtime/module.go`.
+- Validate: `GOWORK=off go test ./pkg/runtime/... -run TestDashboard -v` and the
+  live sequence in the step prose.
+
+### Technical details
+- Topics: `dash:<slug(title)>` and `dash:latest`. Frame type `snapshot`, body in
+  `value`. Dashboard id = `opts.id || slug(title)`.

@@ -77,3 +77,12 @@ Backfill the implementation diary to the full investigation format (Steps 2-15) 
 ## 2026-10-06
 
 Import the v2 prototype (dashboard DSL + widget interpreter) and add the v2 analysis/design/implementation guide.
+
+## 2026-10-06
+
+Phase B: backend dashboard DSL (dashboard()/widgets) with JSON snapshot publishing over dash:<id>/dash:latest; TestDashboardSnapshot.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/module.go — publishSnapshot export
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/prelude/engine.js — Dashboard DSL and widget compute

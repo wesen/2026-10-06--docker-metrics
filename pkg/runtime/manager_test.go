@@ -170,3 +170,102 @@ func TestMutationsGatedByFlag(t *testing.T) {
 		t.Fatalf("expected stop:web, got %v", got)
 	}
 }
+
+func TestDashboardSnapshot(t *testing.T) {
+	rec := &recorder{}
+	ctx := context.Background()
+	var snapshots []map[string]any
+	m := NewManager(seedStore())
+	s, err := m.NewSession(ctx, Options{
+		Log:             rec.log,
+		PublishSnapshot: func(id string, snap map[string]any) { snapshots = append(snapshots, snap) },
+		TickInterval:    time.Hour,
+	})
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+	defer func() { _ = s.Close(context.Background()) }()
+
+	src := `
+const d = docker();
+const all = d.containers();
+dashboard("Board", { every: "0s", range: "15m" })
+  .section("Numbers")
+  .row(
+    stat("CPU", all, cpu.pipe(pct, avg), { unit: "%", warn: gt(50), crit: gt(80) }),
+    gauge("Hottest", all, cpu.pipe(pct, max), { unit: "%" }),
+    kv("Facts", () => ({ containers: all.size }))
+  )
+  .row(
+    line("CPU per container", all, cpu.pipe(pct)),
+    top("Memory", all, mem.pipe(mb)),
+    table("Containers", all, { cpu: cpu.pipe(pct), mem: mem.pipe(of("limit"), pct) }, { sort: "cpu" }),
+    donut("CPU share", all, cpu.pipe(sum), by("name")),
+    grid("Health", all, mem.pipe(of("limit"), pct)),
+    sparks("Per", all, cpu.pipe(pct)),
+    histogram("CPU dist", all, cpu.pipe(pct), { bins: 6 }),
+    events("Recent", { limit: 5 }),
+    text("Notes", "# hi\n- a"),
+  )
+  .show();
+`
+	if err := s.RunSource(ctx, src); err != nil {
+		t.Fatalf("RunSource: %v\nlogs:\n%s", err, rec.joined())
+	}
+	// Allow the dashboard's refresh promise to settle.
+	for i := 0; i < 5 && len(snapshots) == 0; i++ {
+		_ = s.Tick(ctx)
+	}
+	if len(snapshots) == 0 {
+		t.Fatal("no dashboard snapshot published")
+	}
+	snap := snapshots[len(snapshots)-1]
+	if snap["title"] != "Board" || snap["id"] != "board" {
+		t.Fatalf("unexpected snapshot header: %v", snap)
+	}
+	rows, _ := snap["rows"].([]any)
+	if len(rows) != 3 {
+		t.Fatalf("want 3 rows (section + 2 rows), got %d", len(rows))
+	}
+	section, _ := rows[0].(map[string]any)
+	if section["section"] != "Numbers" {
+		t.Fatalf("first row should be a section: %v", rows[0])
+	}
+	var types []string
+	for _, r := range rows[1:] {
+		rowMap, _ := r.(map[string]any)
+		ws, _ := rowMap["widgets"].([]any)
+		for _, w := range ws {
+			wm, _ := w.(map[string]any)
+			tp, _ := wm["type"].(string)
+			types = append(types, tp)
+		}
+	}
+	for _, want := range []string{"stat", "gauge", "kv", "line", "top", "table", "donut", "grid", "sparks", "histogram", "events", "text"} {
+		if !containsStr(types, want) {
+			t.Errorf("snapshot missing widget type %q (have %v)", want, types)
+		}
+	}
+	// The first stat must carry a numeric value and a state.
+	rowMap, _ := rows[1].(map[string]any)
+	ws, _ := rowMap["widgets"].([]any)
+	first, _ := ws[0].(map[string]any)
+	data, _ := first["data"].(map[string]any)
+	switch data["value"].(type) {
+	case float64, int64, int:
+	default:
+		t.Errorf("stat data should carry a numeric value, got %#v", data["value"])
+	}
+	if _, ok := data["state"].(string); !ok {
+		t.Errorf("stat data should carry a state, got %#v", data["state"])
+	}
+}
+
+func containsStr(xs []string, s string) bool {
+	for _, x := range xs {
+		if x == s {
+			return true
+		}
+	}
+	return false
+}

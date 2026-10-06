@@ -546,7 +546,10 @@
   }
   const rule = (n) => new Rule(n);
   const emit = (name) => {
-    const f = (c, e, d) => core.emitEvent(name, { container: (c && c.name) || null, rule: null });
+    const f = (c, e, d) => {
+      logEvent("emit", name + (c && c.name ? " · " + c.name : ""));
+      core.emitEvent(name, { container: (c && c.name) || null, rule: null });
+    };
     f.label = "emit(" + name + ")";
     return f;
   };
@@ -589,6 +592,7 @@
           const value = r.pred.metric ? valueOf(r.pred.metric, ctx) : true;
           const evt = { rule: r.name, container: handle, value, at: now() };
           core.emitEvent(r.name, { container: sim.name, rule: r.name, value });
+          logEvent("rule", r.name + " · " + sim.name);
           for (const a of r.actions) {
             try {
               await a(handle, evt, this.group.docker);
@@ -792,10 +796,405 @@
     return vals.map((v) => ch[hi === lo ? 0 : Math.round(((v - lo) / (hi - lo)) * 7)]).join("");
   };
 
+  /* ───────────── dashboard DSL ───────────── */
+  const eventLog = [];
+  function logEvent(type, msg) {
+    eventLog.push({ t: now(), type: type, msg: msg });
+    if (eventLog.length > 400) eventLog.shift();
+  }
+  function slug(s) {
+    return (
+      String(s == null ? "" : s)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "dashboard"
+    );
+  }
+
+  // jsonSafe turns a snapshot into plain JSON: functions and comparator objects
+  // (warn/crit) are dropped, and non-data JS objects are skipped. Without this
+  // the snapshot cannot cross the Go boundary.
+  function jsonSafe(v, depth) {
+    depth = depth || 0;
+    if (v == null || depth > 8) return depth > 8 ? undefined : v;
+    const t = typeof v;
+    if (t === "number" || t === "string" || t === "boolean") return v;
+    if (t === "function") return undefined;
+    if (t !== "object") return undefined;
+    if (v instanceof Metric || v instanceof Pred || v instanceof Group || v instanceof Widget || v instanceof Dashboard) return undefined;
+    if (v.__cmp || v.__op || v.__by || v.__win || v.__bucket) return undefined;
+    if (Array.isArray(v)) {
+      const out = [];
+      for (const x of v) {
+        const y = jsonSafe(x, depth + 1);
+        if (y !== undefined) out.push(y);
+      }
+      return out;
+    }
+    const o = {};
+    for (const [k, x] of Object.entries(v)) {
+      const y = jsonSafe(x, depth + 1);
+      if (y !== undefined) o[k] = y;
+    }
+    return o;
+  }
+
+  const maxOf = lift("maxOf", (x, y) => Math.max(x, y));
+  const minOf = lift("minOf", (x, y) => Math.min(x, y));
+  const rawOf = (h) => (h instanceof Report ? h.data : h);
+  const leaves = (d, p) => {
+    p = p || [];
+    if (Array.isArray(d)) return [{ name: p.join("/"), pts: d }];
+    if (d && typeof d === "object") return Object.entries(d).flatMap(([k, v]) => leaves(v, p.concat(k)));
+    return [];
+  };
+  const flatVals = (d, p) => {
+    p = p || [];
+    if (typeof d === "number") return isFinite(d) ? [[p.join("/"), d]] : [];
+    if (typeof d === "boolean") return [[p.join("/"), +d]];
+    if (d && typeof d === "object") return Object.entries(d).flatMap(([k, v]) => flatVals(v, p.concat(k)));
+    return [];
+  };
+  const avgPts = (ls) => {
+    const acc = new Map();
+    for (const l of ls)
+      for (const p of l.pts) {
+        if (p.v == null) continue;
+        if (!acc.has(p.t)) acc.set(p.t, []);
+        acc.get(p.t).push(p.v);
+      }
+    return [...acc].sort((a, b) => a[0] - b[0]).map(([t, vs]) => ({ t: t, v: vs.reduce((x, y) => x + y, 0) / vs.length }));
+  };
+  const stateOf = (v, o) => (v == null || !o ? "ok" : o.crit && o.crit.fn(v) ? "crit" : o.warn && o.warn.fn(v) ? "warn" : "ok");
+  const isOpts = (x) =>
+    x && typeof x === "object" && !x.__by && !x.__win && !x.__bucket && !(x instanceof Metric) && !(x instanceof Group) && !(x instanceof Pred);
+  const DEFSPAN = { stat: 3, gauge: 3, line: 6, area: 6, bar: 6, donut: 4, table: 8, heatmap: 8, grid: 6, top: 4, histogram: 4, sparks: 6, events: 6, text: 4, kv: 4 };
+  function wmods(w, ctx, n, noBy) {
+    const m = w.mods.filter((x) => !(noBy && x.__by));
+    if (!m.some((x) => x.__win)) m.push(last(ctx.range));
+    if (n && !m.some((x) => x.__bucket)) m.push(bucket(Math.max(1, Math.round(ctx.range / n))));
+    return m;
+  }
+  async function entriesOf(g, m, w) {
+    if (!(m instanceof Metric)) throw new TypeError(w.type + "(): expected a metric");
+    const bys = w.mods.filter((x) => x.__by),
+      mods = m.reducer && !bys.length ? [by("name")] : bys;
+    const r = await g.read(m, ...mods);
+    return g.single && typeof r === "number" ? [[g.name, r]] : flatVals(r);
+  }
+  async function scalarOf(g, m, w) {
+    if (!(m instanceof Metric)) throw new TypeError(w.type + "(): expected a single metric");
+    const r = await g.read(m);
+    if (typeof r === "number") return r;
+    if (r && typeof r === "object") {
+      const v = nums(Object.values(r));
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    }
+    return null;
+  }
+  const asSpecs = (sp) => (sp instanceof Metric ? { [sp.name]: sp } : sp);
+
+  class Widget {
+    constructor(type, title, group, spec, mods, opts) {
+      this.type = type;
+      this.title = title;
+      this.group = group;
+      this.spec = spec;
+      this.mods = mods || [];
+      this.opts = opts || {};
+    }
+    async compute(ctx) {
+      const o = this.opts,
+        g = typeof this.group === "function" ? this.group(ctx.vars) : this.group,
+        spec = this.spec;
+      if (this.group != null && !(g instanceof Group)) throw new TypeError(this.type + "(): second argument must be a group like d.containers(...)");
+      switch (this.type) {
+        case "stat": {
+          const v = await scalarOf(g, spec, this);
+          let ser = [];
+          try {
+            ser = avgPts(leaves(rawOf(await g.history(spec, ...wmods(this, ctx, 40, true))))).map((p) => p.v);
+          } catch (e) {}
+          const delta = ser.length > 1 && ser[0] ? ((ser[ser.length - 1] - ser[0]) / Math.abs(ser[0])) * 100 : null;
+          return { value: v, state: stateOf(v, o), series: ser, delta: delta };
+        }
+        case "gauge": {
+          const v = await scalarOf(g, spec, this);
+          return { value: v, min: o.min != null ? o.min : 0, max: o.max != null ? o.max : 100, state: stateOf(v, o) };
+        }
+        case "line":
+        case "area": {
+          const specs = asSpecs(spec),
+            ks = Object.keys(specs),
+            series = [];
+          for (const k of ks)
+            for (const l of leaves(rawOf(await g.history(specs[k], ...wmods(this, ctx, 60)))))
+              series.push({ name: ks.length > 1 ? (l.name ? k + "/" + l.name : k) : l.name || g.name || k, pts: l.pts });
+          return { series: series.slice(0, 12), t0: now() - ctx.range, t1: now() };
+        }
+        case "bar": {
+          const specs = asSpecs(spec),
+            ser = [],
+            labels = [];
+          for (const k of Object.keys(specs)) {
+            const ent = await entriesOf(g, specs[k], this);
+            ent.forEach(([l]) => labels.includes(l) || labels.push(l));
+            ser.push({ name: k, map: new Map(ent) });
+          }
+          if (o.sort && ser[0]) labels.sort((a, b) => (ser[0].map.get(b) || 0) - (ser[0].map.get(a) || 0));
+          const L = labels.slice(0, o.limit || 14);
+          return { labels: L, series: ser.map((s) => ({ name: s.name, values: L.map((l) => (s.map.has(l) ? s.map.get(l) : null)) })) };
+        }
+        case "donut": {
+          const ent = (await entriesOf(g, spec, this)).filter((e) => e[1] > 0).sort((a, b) => b[1] - a[1]);
+          const sl = ent.slice(0, 7).map(([label, value]) => ({ label: label, value: value })),
+            rest = ent.slice(7).reduce((a, e) => a + e[1], 0);
+          if (rest > 0) sl.push({ label: "other", value: rest });
+          return { slices: sl, total: sl.reduce((a, x) => a + x.value, 0) };
+        }
+        case "table": {
+          const specs = asSpecs(spec),
+            cols = Object.keys(specs),
+            maps = {},
+            names = [];
+          for (const k of cols) {
+            const ent = await entriesOf(g, specs[k], this);
+            maps[k] = new Map(ent);
+            ent.forEach(([n]) => names.includes(n) || names.push(n));
+          }
+          let rows = names.map((n) => ({ name: n, cells: Object.fromEntries(cols.map((k) => [k, maps[k].has(n) ? maps[k].get(n) : null])) }));
+          const sk = o.sort || cols[0],
+            dir = o.asc ? 1 : -1;
+          rows.sort((a, b) => dir * ((a.cells[sk] == null ? -Infinity : a.cells[sk]) - (b.cells[sk] == null ? -Infinity : b.cells[sk])));
+          rows = rows.slice(0, o.limit || 12);
+          const co = o.columns || {};
+          rows.forEach((r) => (r.st = Object.fromEntries(cols.map((k) => [k, stateOf(r.cells[k], co[k])]))));
+          return {
+            cols: cols,
+            rows: rows,
+            colMax: Object.fromEntries(cols.map((k) => [k, co[k] && co[k].max != null ? co[k].max : Math.max(1e-9, ...rows.map((r) => r.cells[k] || 0))])),
+            colOpts: Object.fromEntries(cols.map((k) => [k, { unit: (co[k] || {}).unit, bar: !!(co[k] || {}).bar, dec: (co[k] || {}).dec }])),
+          };
+        }
+        case "heatmap": {
+          const mods = wmods(this, ctx, 30);
+          if (spec.reducer && !mods.some((x) => x.__by)) mods.push(by("name"));
+          const ls = leaves(rawOf(await g.history(spec, ...mods))).slice(0, 16);
+          const times = [...new Set(ls.flatMap((l) => l.pts.map((p) => p.t)))].sort((a, b) => a - b);
+          const cells = ls.map((l) => {
+            const m = new Map(l.pts.map((p) => [p.t, p.v]));
+            return times.map((t) => (m.has(t) ? m.get(t) : null));
+          });
+          const vals = cells.flat().filter((v) => v != null);
+          return { rows: ls.map((l) => l.name || g.name || spec.name), times: times, cells: cells, min: o.min != null ? o.min : Math.min(...vals), max: o.max != null ? o.max : Math.max(...vals) };
+        }
+        case "grid":
+          return { tiles: (await entriesOf(g, spec, this)).map(([name, value]) => ({ name: name, value: value, state: stateOf(value, o) })) };
+        case "top": {
+          const ent = (await entriesOf(g, spec, this)).sort((a, b) => (o.asc ? a[1] - b[1] : b[1] - a[1])).slice(0, o.n || o.limit || 6);
+          return { items: ent.map(([name, value]) => ({ name: name, value: value, state: stateOf(value, o) })), max: o.max != null ? o.max : Math.max(1e-9, ...ent.map((e) => e[1])) };
+        }
+        case "histogram": {
+          const vs = leaves(rawOf(await g.history(spec, ...wmods(this, ctx, 60))))
+            .flatMap((l) => l.pts.map((p) => p.v))
+            .filter((v) => v != null && isFinite(v));
+          const n = o.bins || 12;
+          let lo = o.min != null ? o.min : Math.min(...vs),
+            hi = o.max != null ? o.max : Math.max(...vs);
+          if (!vs.length) {
+            lo = 0;
+            hi = 1;
+          }
+          if (hi === lo) hi = lo + 1;
+          const bins = Array.from({ length: n }, (_, i) => ({ lo: lo + ((hi - lo) * i) / n, hi: lo + ((hi - lo) * (i + 1)) / n, n: 0 }));
+          for (const v of vs) {
+            const i = Math.min(n - 1, Math.max(0, Math.floor(((v - lo) / (hi - lo)) * n)));
+            bins[i].n++;
+          }
+          return { bins: bins, total: vs.length, p50: p50.fn(vs), p95: p95.fn(vs) };
+        }
+        case "sparks": {
+          const mods = wmods(this, ctx, 30);
+          if (spec.reducer && !mods.some((x) => x.__by)) mods.push(by("name"));
+          const ls = leaves(rawOf(await g.history(spec, ...mods))).slice(0, o.limit || 8);
+          return {
+            rows: ls.map((l) => {
+              const v = l.pts.length ? l.pts[l.pts.length - 1].v : null;
+              return { name: l.name || g.name || spec.name, pts: l.pts.map((p) => p.v), value: v, state: stateOf(v, o) };
+            }),
+          };
+        }
+        case "events": {
+          const ty = o.types;
+          return { items: eventLog.filter((e) => !ty || ty.includes(e.type)).slice(-(o.limit || 8)).reverse() };
+        }
+        case "text":
+          return { body: typeof spec === "function" ? String(await spec(ctx)) : String(spec) };
+        case "kv":
+          return { pairs: Object.entries(await spec(ctx)) };
+      }
+      throw new Error("unknown widget " + this.type);
+    }
+  }
+
+  const wfac = (type) => (title, group, spec, ...rest) =>
+    new Widget(type, title, group, spec, rest.filter((x) => !isOpts(x)), Object.assign({}, ...rest.filter(isOpts)));
+  const stat = wfac("stat"),
+    gauge = wfac("gauge"),
+    line = wfac("line"),
+    area = wfac("area"),
+    bar = wfac("bar"),
+    donut = wfac("donut"),
+    table = wfac("table"),
+    heatmap = wfac("heatmap"),
+    grid = wfac("grid"),
+    top = wfac("top"),
+    histogram = wfac("histogram"),
+    sparks = wfac("sparks");
+  const events = (title, opts) => new Widget("events", title, null, null, [], opts);
+  const text = (title, body, opts) => new Widget("text", title, null, body, [], opts);
+  const kv = (title, fn, opts) => new Widget("kv", title, null, fn, [], opts);
+
+  class Dashboard {
+    constructor(title, o) {
+      o = o || {};
+      this.title = title;
+      this.id = o.id || slug(title);
+      this.ev = sec(o.every || "5s");
+      this.rng = sec(o.range || "15m");
+      this.rngOpts = [300, 900, 1800];
+      if (!this.rngOpts.includes(this.rng)) this.rngOpts.push(this.rng);
+      this.rngOpts.sort((a, b) => a - b);
+      this.vars = [];
+      this.items = [];
+      this.snap = null;
+      this.item = null;
+      this.lastT = -1e9;
+      this.lastReal = 0;
+      this.busy = false;
+      this.again = false;
+    }
+    var(name, options, def) {
+      options = [].concat(options);
+      this.vars.push({ name: name, options: options, value: def === undefined ? options[0] : def });
+      return this;
+    }
+    range(d, options) {
+      this.rng = sec(d);
+      if (options) this.rngOpts = options.map(sec);
+      if (!this.rngOpts.includes(this.rng)) this.rngOpts.push(this.rng);
+      this.rngOpts.sort((a, b) => a - b);
+      return this;
+    }
+    every(d) {
+      this.ev = sec(d);
+      return this;
+    }
+    section(t) {
+      this.items.push({ section: t });
+      return this;
+    }
+    row(...ws) {
+      ws = ws.flat();
+      for (const w of ws) if (!(w instanceof Widget)) throw new TypeError("row(): expected widgets such as stat(), line() or table()");
+      this.items.push({ widgets: ws });
+      return this;
+    }
+    setVar(n, v) {
+      const x = this.vars.find((y) => y.name === n);
+      if (x) x.value = v;
+      return this.refresh(true);
+    }
+    setRange(s) {
+      this.rng = s;
+      return this.refresh(true);
+    }
+    async refresh(force) {
+      if (this.busy) {
+        if (force) this.again = true;
+        return;
+      }
+      const nowMs = Date.now();
+      if (!force && nowMs - this.lastReal < 300) return;
+      this.busy = true;
+      this.lastReal = nowMs;
+      this.lastT = now();
+      try {
+        const ctx = { vars: Object.fromEntries(this.vars.map((v) => [v.name, v.value])), range: this.rng },
+          rows = [];
+        let id = 0;
+        for (const it of this.items) {
+          if (it.section) {
+            rows.push({ section: it.section });
+            continue;
+          }
+          const ws = [];
+          for (const w of it.widgets) {
+            let data = null,
+              error = null;
+            try {
+              data = await w.compute(ctx);
+            } catch (e) {
+              error = (e && e.message) || String(e);
+            }
+            ws.push({ id: id++, type: w.type, title: w.title, o: w.opts, span: w.opts.span || DEFSPAN[w.type], data: data, error: error });
+          }
+          rows.push({ widgets: ws });
+        }
+        this.snap = {
+          title: this.title,
+          id: this.id,
+          t: now(),
+          vars: this.vars.map((v) => ({ name: v.name, options: v.options, value: v.value })),
+          range: this.rng,
+          rangeOptions: this.rngOpts,
+          rows: rows,
+        };
+      } finally {
+        this.busy = false;
+        if (this.again) {
+          this.again = false;
+          this.refresh(true);
+        }
+      }
+    }
+    show() {
+      if (this.item) return this;
+      const me = this;
+      this.item = addItem({
+        label: "dashboard " + this.title,
+        tick: () => {
+          if (now() - me.lastT < me.ev) return;
+          me.refresh().then(() => {
+            if (me.snap) core.publishSnapshot(me.id, jsonSafe(me.snap));
+          });
+        },
+        stop: () => {
+          removeItem(me.item);
+          me.item = null;
+        },
+      });
+      this.refresh().then(() => {
+        if (me.snap) core.publishSnapshot(me.id, jsonSafe(me.snap));
+      });
+      return this;
+    }
+    stop() {
+      if (this.item) this.item.stop();
+      return this;
+    }
+    snapshot() {
+      return this.snap;
+    }
+  }
+  const dashboard = (title, o) => new Dashboard(title, o);
+
+
   const api = {
     docker, fleet, metric, rule, emit, cpu, mem, net, io, pids, pct, mb, kb, gb, round, of, rate,
     avg, sum, min, max, p50, p95, p99, count, by, last, since, bucket,
-    gt, gte, lt, lte, eq, between, and, or, not, sustained, add, sub, mul, div,
+    gt, gte, lt, lte, eq, between, and, or, not, sustained, add, sub, mul, div, maxOf, minOf,
+    dashboard, stat, gauge, line, area, bar, donut, table, heatmap, grid, top, histogram, sparks, events, text, kv,
     prometheus, statsd, json, file, tap, ws, sleep, time: timeStr, now: now, spark,
     Report, Metric, Pred,
   };

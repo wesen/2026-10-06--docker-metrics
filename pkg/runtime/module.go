@@ -28,6 +28,8 @@ type Options struct {
 	Action func(action string, names []string, opts map[string]any)
 	// Publish forwards a streamed frame to a WebSocket topic.
 	Publish func(topic string, frame map[string]any)
+	// PublishSnapshot forwards a computed dashboard snapshot.
+	PublishSnapshot func(id string, snapshot map[string]any)
 	// AllowMutations gates restart/stop/start.
 	AllowMutations bool
 	// TickInterval drives streams and watchers. Defaults to 500ms.
@@ -144,6 +146,11 @@ func (r registrar) loader(ctx *engine.RuntimeModuleRegistrationContext) require.
 		exports.Set("publish", func(topic string, frame goja.Value) {
 			if state.opts.Publish != nil {
 				state.opts.Publish(topic, exportMap(frame))
+			}
+		})
+		exports.Set("publishSnapshot", func(id string, snap goja.Value) {
+			if state.opts.PublishSnapshot != nil {
+				state.opts.PublishSnapshot(id, exportMap(snap))
 			}
 		})
 		exports.Set("_finish", func(errMsg string) {
