@@ -34,3 +34,12 @@ Phase 2: go-go-goja runtime with a dockermetrics native module, ported DSL prelu
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/module.go — dockermetrics native module
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/prelude/engine.js — ported DSL engine
+
+## 2026-10-06
+
+Phase 3: WebSocket hub with topics/backpressure, REST API, Prometheus registry, run/stop endpoints, ws(topic) sink and the serve command with graceful shutdown.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/httpapi/server.go — HTTP/WebSocket/Prometheus server
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/hub/hub.go — WebSocket hub

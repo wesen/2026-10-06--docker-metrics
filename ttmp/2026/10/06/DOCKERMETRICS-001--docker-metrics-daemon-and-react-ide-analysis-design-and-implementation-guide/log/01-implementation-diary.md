@@ -423,3 +423,84 @@ verbatim against real data.
 ### Technical details
 - Module name: `dockermetrics`. Runtimes are per dashboard session.
 - Default tick interval: 500ms; CLI run uses 250ms.
+
+## Step 12: Phase 3 — WebSocket hub, HTTP API and serve (ump)
+
+This step adds the presentation plane: a topic-based WebSocket hub with
+backpressure, the REST API (hosts, containers, samples, events, dashboards,
+run/stop), a Prometheus registry fed by `prometheus()` sinks, a `ws(topic)` sink
+that forwards prelude streams to the hub, and the `serve` command with graceful
+shutdown. A built-in "fleet" dashboard streams CPU/memory percentages to the
+`fleet` topic.
+
+### Prompt Context
+**User prompt (verbatim):** see Step 10.
+**Assistant interpretation:** Make the daemon runnable and observable so the
+React app (Phase 4) has a real backend.
+**Inferred user intent:** A single process that serves live data and the IDE.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- `pkg/hub/hub.go`: `Hub` (subscribe/unsubscribe/publish/broadcast), `Client`
+  with buffered send channel, write/read pumps, ping/pong, and drop-oldest
+  backpressure; `coder/websocket` v1.8.15.
+- `pkg/httpapi/server.go`: `ServeMux` routes, `/ws`, `/healthz`, `/readyz`,
+  hosts/containers/samples/events, Prometheus `/metrics`, SPA/static serving
+  with fallback, `StartDefaultDashboard`, `RecordEvent`.
+- `pkg/httpapi/prom.go`: a registry that renders the exposition format.
+- `pkg/httpapi/dashboards.go`: in-memory dashboard CRUD (SQLite later).
+- `pkg/httpapi/run.go`: `POST /api/v1/run`, `POST /api/v1/run/{id}/stop`,
+  per-run goja sessions streaming `log`/`frame`/`run` frames to `run:<id>`.
+- `pkg/runtime`: added the `ws(topic)` sink and `core.publish`.
+- `pkg/cli/serve.go`: sources → store → collector → hub → server, signal-driven
+  graceful shutdown, `--listen`, `--static-dir`, `--no-default-dashboard`,
+  `--allow-mutations`.
+- `pkg/httpapi/server_test.go`: health/ready, containers, WebSocket
+  subscribe/ping/pong, Prometheus rendering.
+
+### Why
+- Topics decouple producers (dashboards, collector events) from consumers
+  (browser). One connection can subscribe to fleet, container, events and run
+  topics.
+- Drop-oldest backpressure keeps a slow browser from stalling the collector.
+
+### What worked
+- `GOWORK=off go test ./... -count=1` passes, including a real WebSocket
+  handshake and subscribe round-trip.
+- Live serve: `/healthz` ok, `/readyz` ready, `/api/v1/hosts` showed
+  `local unix:///var/run/docker.sock version 29.8.0`, `/ws` returned
+  `101 Switching Protocols`, `POST /api/v1/run` returned a run id, dashboard
+  create returned an id.
+
+### What didn't work
+- `/api/v1/containers` returned `null` for the first seconds: `Collector.Run`
+  started its tickers without an immediate poll. Fixed by priming with
+  `Refresh` + `PollStats` before the loops.
+- `go vet` flagged a context leak in `handleRun` when `NewSession` failed; fixed
+  by calling `cancel()` on the error path.
+
+### What I learned
+- The Docker daemon's first `stream=0` read can take ~1s; priming the collector
+  at startup and a 5s request timeout both matter for a responsive UI.
+
+### What was tricky to build
+- Mapping the prelude's flattened sink payloads into both Prometheus text and
+  hub frames while keeping the producers decoupled.
+
+### What warrants a second pair of eyes
+- `InsecureSkipVerify: true` on the WebSocket accept: acceptable for localhost,
+  but revisit if the daemon is bound to a public interface (add origin checks).
+- Dashboard persistence is in-memory only; a restart loses definitions.
+
+### What should be done in the future
+- Add `--allow-mutations` enforcement tests; wire rule actions to the Docker
+  client; add SQLite persistence.
+
+### Code review instructions
+- Start at `pkg/hub/hub.go` and `pkg/httpapi/server.go`.
+- Validate: `GOWORK=off go test ./pkg/httpapi/... -count=1`, then
+  `GOWORK=off go run ./cmd/docker-metrics serve` and curl the endpoints.
+
+### Technical details
+- Topics: `fleet`, `container:<name>`, `events`, `run:<id>`.
+- Outbound buffer 256; ping every 30s; write timeout 10s.

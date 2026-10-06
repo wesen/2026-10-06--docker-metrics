@@ -86,6 +86,10 @@ func (c *Collector) SetClock(fn func() int64) { c.now = fn }
 
 // Run polls until ctx is cancelled and returns ctx.Err().
 func (c *Collector) Run(ctx context.Context) error {
+	// Prime the store immediately so the UI has data as soon as it connects.
+	c.Refresh(ctx)
+	c.PollStats(ctx)
+
 	var wg sync.WaitGroup
 	for _, s := range c.sources {
 		wg.Add(1)

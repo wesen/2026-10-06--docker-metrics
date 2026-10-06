@@ -730,6 +730,8 @@
   const prometheus = (o = {}) => ({ __sink: "prometheus", write: (f) => core.sink("prometheus", o, { t: f.t, series: flattenData(f.data) }) });
   const statsd = (url, o = {}) => ({ __sink: "statsd", url, opts: o, write: (f) => core.sink("statsd", Object.assign({ url }, o), { t: f.t, series: flattenData(f.data) }) });
   const file = (path, fmt) => ({ __sink: "file", write: (f) => core.sink("file", { path }, { t: f.t, line: (fmt || json).fmt(f) }) });
+  // ws(topic) forwards streamed frames to the WebSocket hub.
+  const ws = (topic) => ({ __sink: "ws", write: (f) => core.publish(topic, { t: f.t, data: f.data, value: f.value }) });
 
   /* ── docker handles ── */
   function parseHost(h) {
@@ -794,7 +796,7 @@
     docker, fleet, metric, rule, emit, cpu, mem, net, io, pids, pct, mb, kb, gb, round, of, rate,
     avg, sum, min, max, p50, p95, p99, count, by, last, since, bucket,
     gt, gte, lt, lte, eq, between, and, or, not, sustained, add, sub, mul, div,
-    prometheus, statsd, json, file, tap, sleep, time: timeStr, now: now, spark,
+    prometheus, statsd, json, file, tap, ws, sleep, time: timeStr, now: now, spark,
     Report, Metric, Pred,
   };
 

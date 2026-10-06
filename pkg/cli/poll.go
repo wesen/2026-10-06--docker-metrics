@@ -34,13 +34,13 @@ func (f *commonFlags) register(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&f.capacity, "capacity", 3600, "samples retained per container")
 }
 
-// buildSources creates one Docker client per host flag (default: local socket).
-func (f *commonFlags) buildSources(ctx context.Context) ([]collector.Source, error) {
+// buildClients creates one Docker client per host flag (default: local socket).
+func (f *commonFlags) buildClients(ctx context.Context) ([]*docker.Client, error) {
 	hosts := f.hosts
 	if len(hosts) == 0 {
 		hosts = []string{""}
 	}
-	var sources []collector.Source
+	var clients []*docker.Client
 	for _, h := range hosts {
 		ep, err := docker.ParseHost(h)
 		if err != nil {
@@ -53,9 +53,22 @@ func (f *commonFlags) buildSources(ctx context.Context) ([]collector.Source, err
 		if _, err := cl.Negotiate(ctx); err != nil {
 			return nil, fmt.Errorf("docker %s: %w", ep.Name, err)
 		}
-		sources = append(sources, cl)
+		clients = append(clients, cl)
 	}
-	return sources, nil
+	return clients, nil
+}
+
+// buildSources is buildClients adapted to the collector.Source interface.
+func (f *commonFlags) buildSources(ctx context.Context) ([]collector.Source, error) {
+	clients, err := f.buildClients(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]collector.Source, len(clients))
+	for i, c := range clients {
+		out[i] = c
+	}
+	return out, nil
 }
 
 func (f *commonFlags) collectorConfig() collector.Config {

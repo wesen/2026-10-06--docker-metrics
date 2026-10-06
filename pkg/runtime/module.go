@@ -26,6 +26,8 @@ type Options struct {
 	Event func(name string, payload map[string]any)
 	// Action receives container mutations (restart|stop|start).
 	Action func(action string, names []string, opts map[string]any)
+	// Publish forwards a streamed frame to a WebSocket topic.
+	Publish func(topic string, frame map[string]any)
 	// AllowMutations gates restart/stop/start.
 	AllowMutations bool
 	// TickInterval drives streams and watchers. Defaults to 500ms.
@@ -137,6 +139,11 @@ func (r registrar) loader(ctx *engine.RuntimeModuleRegistrationContext) require.
 		exports.Set("action", func(action string, names []string, opts goja.Value) {
 			if state.opts.Action != nil && state.opts.AllowMutations {
 				state.opts.Action(action, names, exportMap(opts))
+			}
+		})
+		exports.Set("publish", func(topic string, frame goja.Value) {
+			if state.opts.Publish != nil {
+				state.opts.Publish(topic, exportMap(frame))
 			}
 		})
 		exports.Set("_finish", func(errMsg string) {

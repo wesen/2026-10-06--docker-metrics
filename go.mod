@@ -3,6 +3,7 @@ module github.com/go-go-golems/docker-metrics
 go 1.26.6
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/dop251/goja v0.0.0-20251103141225-af2ceb9156d7
 	github.com/dop251/goja_nodejs v0.0.0-20250409162600-f7acab6894b0
 	github.com/go-go-golems/go-go-goja v0.10.6

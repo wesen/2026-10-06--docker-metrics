@@ -28,6 +28,7 @@ type Client struct {
 	base    string
 	mu      sync.Mutex
 	version string // e.g. "v1.47"; empty until negotiated
+	server  string // daemon version, e.g. "27.0.3"
 }
 
 // NewClient builds a client for the endpoint. It does not perform any network
@@ -171,6 +172,14 @@ func hostKeyCallback() (ssh.HostKeyCallback, error) {
 // Endpoint returns the endpoint this client talks to.
 func (c *Client) Endpoint() Endpoint { return c.ep }
 
+// ServerVersion returns the daemon version reported by /version (empty until
+// Negotiate has run).
+func (c *Client) ServerVersion() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.server
+}
+
 // Name returns the short host label.
 func (c *Client) Name() string { return c.ep.Name }
 
@@ -211,6 +220,7 @@ func (c *Client) Negotiate(ctx context.Context) (string, error) {
 	if v.APIVersion != "" {
 		c.mu.Lock()
 		c.version = "v" + strings.TrimPrefix(v.APIVersion, "v")
+		c.server = v.Version
 		c.mu.Unlock()
 	}
 	return v.Version, nil
