@@ -548,7 +548,9 @@
   const emit = (name) => {
     const f = (c, e, d) => {
       logEvent("emit", name + (c && c.name ? " · " + c.name : ""));
-      core.emitEvent(name, { container: (c && c.name) || null, rule: null });
+      core.emitEvent(name, { container: (c && c.name) || null, rule: (e && e.rule) || null });
+      // Deliver to d.on(name, fn) and d.on("*", fn) listeners, as the prototype does.
+      if (d && d.emit) d.emit(name, e);
     };
     f.label = "emit(" + name + ")";
     return f;

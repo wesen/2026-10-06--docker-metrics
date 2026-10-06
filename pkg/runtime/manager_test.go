@@ -325,3 +325,28 @@ func containsStr(xs []string, s string) bool {
 	}
 	return false
 }
+
+func TestEmitReachesDockerListeners(t *testing.T) {
+	rec := &recorder{}
+	s, cancel := newTestSession(t, rec)
+	defer cancel()
+	ctx := context.Background()
+	src := `
+const d = docker();
+d.on("alert", (e, name) => console.log("got", name, e.rule, e.container.name));
+d.on("*", (e, name) => console.log("any", name));
+d.containers("web").watch(rule("always").when(cpu.is(gte(0))).then(emit("alert")).cooldown("1h"));
+`
+	if err := s.RunSource(ctx, src); err != nil {
+		t.Fatalf("RunSource: %v", err)
+	}
+	if err := s.Tick(ctx); err != nil {
+		t.Fatalf("Tick: %v", err)
+	}
+	logs := rec.joined()
+	for _, want := range []string{"got alert always web", "any alert"} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("listener output %q missing; logs:\n%s", want, logs)
+		}
+	}
+}
