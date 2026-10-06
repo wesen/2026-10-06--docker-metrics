@@ -86,3 +86,12 @@ Phase B: backend dashboard DSL (dashboard()/widgets) with JSON snapshot publishi
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/module.go — publishSnapshot export
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/prelude/engine.js — Dashboard DSL and widget compute
+
+## 2026-10-06
+
+Phase C: React widget interpreter (15 widget components + registry), DashboardView, /d/<id> route, IDE Dashboard tab, dashboard slice and WebSocket snapshot handling.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/organisms/dashboard/DashboardView.tsx — Dashboard renderer
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/organisms/dashboard/registry.ts — Widget type registry

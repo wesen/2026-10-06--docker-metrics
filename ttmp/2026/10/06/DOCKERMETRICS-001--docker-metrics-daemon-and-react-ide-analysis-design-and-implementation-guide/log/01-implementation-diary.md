@@ -1215,3 +1215,83 @@ without the browser containing any metric logic.
 ### Technical details
 - Topics: `dash:<slug(title)>` and `dash:latest`. Frame type `snapshot`, body in
   `value`. Dashboard id = `opts.id || slug(title)`.
+
+## Step 18: Phase C — React widget interpreter and dashboard routes
+
+This step implements the browser half of v2: a generic interpreter that renders
+dashboard snapshots, plus routes to view a board.
+
+### Prompt Context
+**User prompt (verbatim):** see Step 17.
+**Assistant interpretation:** The React side must contain no metric logic; it maps
+`widget.type` to a component and renders `widget.data`.
+**Inferred user intent:** Dashboards authored in JS render in the app, using the
+prototype's look, without reimplementing metrics in the browser.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- `web/src/theme/widgets.css`: the ~3.6 KB of widget CSS ported from the v2
+  prototype.
+- `web/src/organisms/dashboard/format.ts`: `fv`, `fnum`, `stc`, `timeStr`,
+  `niceMax`, `COLORS`.
+- `web/src/organisms/dashboard/widgets/`: `basic.tsx` (Line, WStat, WGauge),
+  `plots.tsx` (Plot, AreaPlot, WBar, WHist), `parts.tsx` (WDonut, WTable, WHeat,
+  WGrid, WTop, WSparks), `text.tsx` (WEvents, WText, WKv).
+- `web/src/organisms/dashboard/registry.ts`: `WR` mapping the fifteen types.
+- `web/src/organisms/dashboard/Widget.tsx`: chrome + state class + registry
+  dispatch (unknown types render an "unsupported widget" card).
+- `web/src/organisms/dashboard/DashboardView.tsx`: header (title, updated time,
+  vars, range), sections and widget rows `flex span/12`.
+- `web/src/app/dashboardSlice.ts`: `snapshots` by id + `latest`.
+- `web/src/hooks/useStream.ts`: subscribes to extra topics and dispatches
+  `snapshot` frames into `dashboardSlice`.
+- `web/src/routes/DashboardBoard.tsx` + `App.tsx`: route `/d/<id>` and the IDE
+  "Dashboard" tab (`dash:latest`).
+- Rebuilt the frontend, restaged `pkg/httpapi/dist`, `go build`/`vet`/`test`
+  green.
+
+### Why
+- A registry + generic `<Widget>` keeps the browser free of metric logic and
+  makes new widget types additive.
+- `dash:latest` lets the IDE follow whatever board a run just defined, without
+  needing to parse the id from console output.
+
+### What worked
+- `pnpm typecheck` clean; `pnpm build` produced a 257 kB bundle (84 kB gzip);
+  the whole Go gate stayed green with the new embed.
+
+### What didn't work
+- `basic.tsx` first imported `./format` (wrong depth); fixed to `../format`.
+- The first `App.tsx` draft used `require()` for the `/d/<id>` route, which does
+  not exist in ESM/Vite; replaced with a normal static import.
+
+### What I learned
+- React components are contravariant in props, so widgets that only need `d`
+  (table, events, text, kv) are assignable to the registry's `{d, o}` signature
+  without extra plumbing.
+
+### What was tricky to build
+- Porting the prototype's `h(...)` render code to typed JSX without changing the
+  visual output: the SVG view boxes, stacking order and opacities were kept
+  exactly, since they define the look.
+
+### What warrants a second pair of eyes
+- Dashboard variables render as disabled selects (the backend has no
+  set-var endpoint yet); confirm display-only is acceptable or add
+  `POST /api/v1/dashboard/{id}/var`.
+- `useStream` opens one socket per hook instance; the IDE and a board route in
+  the same page would open two. Consider a shared connection.
+
+### What should be done in the future
+- A dashboard list page that links to `/d/<id>`; a "Save" action that persists
+  the JS source; var/range interactivity via an endpoint.
+
+### Code review instructions
+- Start at `web/src/organisms/dashboard/registry.ts`, `Widget.tsx`,
+  `DashboardView.tsx`, then `web/src/hooks/useStream.ts`.
+- Validate: `cd web && pnpm typecheck && pnpm build`, then run a dashboard and
+  open `/d/<id>`.
+
+### Technical details
+- Snapshot frame: `{type:"snapshot", topic:"dash:<id>", value: DashboardSnapshot}`.
+- `flex: span 1 (span/12)%`, min-height from `opts.h` per widget.

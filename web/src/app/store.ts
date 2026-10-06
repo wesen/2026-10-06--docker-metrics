@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { setupListeners } from "@reduxjs/toolkit/query";
 import { useDispatch, useSelector, type TypedUseSelectorHook } from "react-redux";
 import { api } from "./api";
+import dashboardReducer from "./dashboardSlice";
 import streamReducer from "./streamSlice";
 import uiReducer from "./uiSlice";
 
@@ -9,6 +10,7 @@ export const store = configureStore({
   reducer: {
     [api.reducerPath]: api.reducer,
     stream: streamReducer,
+    dashboard: dashboardReducer,
     ui: uiReducer,
   },
   middleware: (getDefault) => getDefault().concat(api.middleware),

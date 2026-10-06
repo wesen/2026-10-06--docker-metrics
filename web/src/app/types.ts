@@ -57,4 +57,35 @@ export interface LogEntry {
   run?: string;
 }
 
+export interface WidgetFrame {
+  id: number;
+  type: string;
+  title: string;
+  span: number;
+  o: Record<string, unknown>;
+  data: any;
+  error?: string | null;
+}
+
+export interface SnapshotRow {
+  section?: string;
+  widgets?: WidgetFrame[];
+}
+
+export interface DashboardVar {
+  name: string;
+  options: string[];
+  value: string;
+}
+
+export interface DashboardSnapshot {
+  title: string;
+  id: string;
+  t: number;
+  vars: DashboardVar[];
+  range: number;
+  rangeOptions: number[];
+  rows: SnapshotRow[];
+}
+
 export const COLORS = ["#e8b339", "#4fd1c5", "#f0685a", "#7cb7ff", "#c792ea", "#a5d6a0", "#f2a65e", "#ff8fab", "#9ad1d4", "#d4c5a0"];

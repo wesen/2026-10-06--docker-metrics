@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type Tab = "console" | "fleet" | "charts" | "events" | "sinks";
+export type Tab = "console" | "dashboard" | "fleet" | "charts" | "events" | "sinks";
 
 interface UiState {
   source: string;

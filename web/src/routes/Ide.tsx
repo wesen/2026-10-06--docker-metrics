@@ -7,6 +7,7 @@ import { useStream } from "../hooks/useStream";
 import { CodeEditor } from "../molecules/CodeEditor";
 import { ChartsPanel } from "../organisms/ChartsPanel";
 import { ConsolePanel } from "../organisms/ConsolePanel";
+import { DashboardView } from "../organisms/dashboard/DashboardView";
 import { EventsPanel } from "../organisms/EventsPanel";
 import { FleetGrid } from "../organisms/FleetGrid";
 import { PresetDrawer } from "../organisms/PresetDrawer";
@@ -15,6 +16,7 @@ import { TopBar } from "../organisms/TopBar";
 
 const TABS: [Tab, string][] = [
   ["console", "Console"],
+  ["dashboard", "Dashboard"],
   ["fleet", "Fleet"],
   ["charts", "Charts"],
   ["events", "Events"],
@@ -25,10 +27,11 @@ export function Ide() {
   const dispatch = useAppDispatch();
   const { source, presetId, tab, selected, presetOpen, runId } = useAppSelector((s) => s.ui);
   const runStatus = useAppSelector((s) => s.stream.runStatus);
+  const dashboardLatest = useAppSelector((s) => s.dashboard.latest);
   const [runSource] = useRunSourceMutation();
   const [stopRun] = useStopRunMutation();
 
-  useStream(runId ? `run:${runId}` : null);
+  useStream(runId ? `run:${runId}` : null, ["dash:latest"]);
 
   const run = async () => {
     dispatch(clearLogs());
@@ -91,6 +94,7 @@ export function Ide() {
           </nav>
           <div className="view">
             {tab === "console" && <ConsolePanel />}
+            {tab === "dashboard" && <DashboardView snap={dashboardLatest} />}
             {tab === "fleet" && <FleetGrid selected={selected} onSelect={(n) => dispatch({ type: "ui/select", payload: n })} />}
             {tab === "charts" && <ChartsPanel selected={selected} />}
             {tab === "events" && <EventsPanel />}
