@@ -1295,3 +1295,77 @@ prototype's look, without reimplementing metrics in the browser.
 ### Technical details
 - Snapshot frame: `{type:"snapshot", topic:"dash:<id>", value: DashboardSnapshot}`.
 - `flex: span 1 (span/12)%`, min-height from `opts.h` per widget.
+
+## Step 19: Restart the demo fleet in tmux and a CLI publishing limitation
+
+The user asked to restart the running app in tmux when the v2 work was done. This
+step rebuilds, recreates the tmux session with the new binary, and records one
+limitation discovered while wiring the live dashboard window.
+
+### Prompt Context
+**User prompt (verbatim):** "restart the result in tmux when done."
+**Assistant interpretation:** Recreate the tmux session so the running demo uses
+the v2 build (dashboard DSL + interpreter).
+**Inferred user intent:** A ready-to-test environment, not just committed code.
+**Commit (code):** this step only changes the diary; the binary is rebuilt from
+the Phase B/C commits.
+
+### What I did
+- Rebuilt `./dist/docker-metrics`, killed the old `dm` session, ran
+  `docker compose down`, and recreated four windows: `collector` (`serve
+  --listen 127.0.0.1:8080`), `fleet` (four load containers), `dashboard`, and
+  `shell`.
+- The `dashboard` window waits for `/healthz`, then POSTs
+  `testdata/dashboards/dash-basic.js` to `POST /api/v1/run` (helper at
+  `/tmp/live-dashboard.sh`), which runs the board inside the server so its
+  snapshots reach the hub.
+- Verified: collector sees 7 containers, `/d/board` serves the SPA, and a
+  `dash:latest` subscriber receives
+  `{title:"Board", id:"board", rows:4}` with widget types
+  `stat, gauge, kv, line, top, table, donut, grid, sparks, histogram, events,
+  text`.
+
+### Why
+- Only the server has a WebSocket hub, so a dashboard must run under `serve` for
+  its snapshots to be visible to browsers.
+
+### What worked
+- The full loop end to end: load containers → collector → goja dashboard →
+  snapshot frame → (browser) interpreter.
+
+### What didn't work
+- The first `dashboard` window used the CLI (`docker-metrics run --follow`).
+  It computed the dashboard and logged `dashboard defined`, but **published
+  nothing**, because the CLI run session does not set
+  `runtime.Options.PublishSnapshot` (there is no hub in the CLI process).
+  Fixed by POSTing the source to the server's `/api/v1/run` instead. The
+  underlying limitation remains: `dashboard().show()` only publishes under
+  `serve`, which is correct but worth documenting in the user guide.
+
+### What I learned
+- A headless `run` and a served `run` share the same runtime code but differ in
+  their wired callbacks; a dashboard is only observable when the publisher is
+  wired.
+
+### What was tricky to build
+- Making the tmux window self-contained and robust: it must wait for the server
+  to be ready, JSON-encode the source without brittle quoting, and then hold the
+  pane open.
+
+### What warrants a second pair of eyes
+- Whether the CLI should optionally expose a hub (e.g. `run --serve`) for parity,
+  or whether dashboards should remain a `serve`-only feature. Recommendation:
+  keep them `serve`-only and document it.
+
+### What should be done in the future
+- Add a `scripts/` helper (committed) for launching a live dashboard instead of a
+  `/tmp` script.
+- Add var/range interactivity and dashboard persistence (source storage).
+
+### Code review instructions
+- No code changes; confirm with `tmux list-windows -t dm`, `curl localhost:8080/healthz`,
+  and the `dash:latest` subscription above.
+
+### Technical details
+- Session `dm`: windows `collector` :8080, `fleet` (compose), `dashboard`
+  (POST /api/v1/run), `shell`.

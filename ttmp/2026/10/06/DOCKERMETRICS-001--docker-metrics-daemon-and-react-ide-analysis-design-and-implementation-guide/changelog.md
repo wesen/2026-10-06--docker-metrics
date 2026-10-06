@@ -95,3 +95,7 @@ Phase C: React widget interpreter (15 widget components + registry), DashboardVi
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/organisms/dashboard/DashboardView.tsx — Dashboard renderer
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/organisms/dashboard/registry.ts — Widget type registry
+
+## 2026-10-06
+
+Restart the demo fleet in tmux with the v2 build (collector + load fleet + live dashboard window); recorded that dashboard snapshots publish only under serve.
