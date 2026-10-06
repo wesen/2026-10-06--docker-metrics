@@ -1,0 +1,53 @@
+# A local test fleet for docker-metrics.
+#
+#   docker compose up --build
+#   # dashboard: http://localhost:8080/   IDE: http://localhost:8080/ide
+#
+# The `collector` service mounts the host Docker socket and polls every
+# container, including the load generators below, so the fleet view, charts and
+# alerts all have live, changing data.
+x-load: &load
+  build: .
+  image: docker-metrics:dev
+  restart: unless-stopped
+
+services:
+  collector:
+    <<: *load
+    command:
+      - serve
+      - --listen
+      - 0.0.0.0:8080
+      - --host
+      - unix:///var/run/docker.sock
+      - --static-dir
+      - ""
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  # Steady CPU with periodic spikes.
+  load-cpu:
+    <<: *load
+    command: ["load", "--profile", "cpu", "--name", "load-cpu", "--cpu", "1.5", "--burst-period", "30s", "--burst-duration", "8s"]
+    cpus: "2.0"
+    mem_limit: 256m
+
+  # Memory sawtooth: grow to the peak, release, repeat.
+  load-mem:
+    <<: *load
+    command: ["load", "--profile", "mem", "--name", "load-mem", "--mem-peak", "300", "--mem-step", "25", "--mem-interval", "3s"]
+    mem_limit: 512m
+
+  # Memory leak: grow to the peak and hold, to trigger sustained-memory alerts.
+  load-leak:
+    <<: *load
+    command: ["load", "--profile", "leak", "--name", "load-leak", "--mem-peak", "420", "--mem-step", "20", "--mem-interval", "4s"]
+    mem_limit: 512m
+
+  # Mixed bursts for the "everything at once" scenario.
+  load-burst:
+    <<: *load
+    command: ["load", "--profile", "mixed", "--name", "load-burst", "--cpu", "0.8", "--burst-period", "15s", "--burst-duration", "6s", "--mem-peak", "200", "--mem-step", "15", "--mem-interval", "4s"]
+    mem_limit: 384m

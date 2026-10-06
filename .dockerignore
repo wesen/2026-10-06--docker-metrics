@@ -1,0 +1,10 @@
+.git
+.github
+# Only the repo-root binary output; pkg/httpapi/dist must stay for go:embed.
+/dist
+/.bin
+web/node_modules
+web/dist
+ttmp
+node_modules
+*.md

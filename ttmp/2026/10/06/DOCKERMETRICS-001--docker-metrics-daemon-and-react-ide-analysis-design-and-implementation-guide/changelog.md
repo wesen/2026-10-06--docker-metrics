@@ -60,3 +60,12 @@ Phase 5: rule mutations wired to the Docker client and gated behind --allow-muta
 ### Related Files
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/cli/serve.go — Gated container mutator
+
+## 2026-10-06
+
+Add load mode (cpu/mem/leak/mixed) plus Dockerfile and docker-compose demo fleet; fix embedded-frontend gitignore and hub frame Type labelling.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/docker-compose.yml — dockerized demo fleet
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/load/load.go — CPU/memory workload generator

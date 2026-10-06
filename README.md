@@ -40,6 +40,24 @@ docker-metrics serve --docker unix:///var/run/docker.sock --listen :8080
 Then open <http://localhost:8080/> for the live dashboard and
 <http://localhost:8080/ide> for the dashboard editor.
 
+## Load testing / demo fleet
+
+The binary has a `load` mode that generates synthetic CPU and memory pressure so
+dashboards have interesting, changing data. Run a few instances to exercise the
+fleet view, charts and alerts:
+
+```bash
+# locally: mixed CPU bursts + memory sawtooth for 30s
+docker-metrics load --profile mixed --cpu 1.5 --burst-period 20s --mem-peak 300 --duration 30s
+
+# or the full dockerized test fleet (collector + 4 load generators)
+docker compose up --build
+#   dashboard http://localhost:8080/   IDE http://localhost:8080/ide
+```
+
+Profiles: `cpu` (steady + bursts), `mem` (sawtooth), `leak` (grow to peak and
+hold), `mixed` (cpu + sawtooth). See `docker-compose.yml` for the fleet.
+
 ## Development
 
 ```bash

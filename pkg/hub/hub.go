@@ -31,12 +31,16 @@ type Frame struct {
 const (
 	outboundBuffer = 256
 	writeTimeout   = 10 * time.Second
+	// recentPerTopic is how many recent frames are replayed to a new
+	// subscriber so fast runs are not missed by a late subscriber.
+	recentPerTopic = 64
 )
 
 // Hub tracks subscribers per topic.
 type Hub struct {
 	mu     sync.RWMutex
 	topics map[string]map[*Client]struct{}
+	recent map[string][][]byte
 	log    *slog.Logger
 }
 
@@ -45,10 +49,10 @@ func New(log *slog.Logger) *Hub {
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Hub{topics: map[string]map[*Client]struct{}{}, log: log}
+	return &Hub{topics: map[string]map[*Client]struct{}{}, recent: map[string][][]byte{}, log: log}
 }
 
-// Subscribe adds a client to a topic.
+// Subscribe adds a client to a topic and replays the recent frames for it.
 func (h *Hub) Subscribe(c *Client, topic string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -58,6 +62,9 @@ func (h *Hub) Subscribe(c *Client, topic string) {
 		h.topics[topic] = set
 	}
 	set[c] = struct{}{}
+	for _, m := range h.recent[topic] {
+		c.enqueue(m)
+	}
 }
 
 // Unsubscribe removes a client from a topic.
@@ -101,20 +108,29 @@ func (h *Hub) TopicCount() int {
 // Publish sends a frame to every subscriber of topic. Slow clients have their
 // oldest buffered frames dropped rather than blocking the producer.
 func (h *Hub) Publish(topic string, frame Frame) {
-	frame.Type = "frame"
+	// Default to a data frame, but preserve frames that carry their own type
+	// (event, log, run, …).
+	if frame.Type == "" {
+		frame.Type = "frame"
+	}
 	frame.Topic = topic
 	data, err := json.Marshal(frame)
 	if err != nil {
 		h.log.Warn("publish marshal failed", "topic", topic, "err", err)
 		return
 	}
-	h.mu.RLock()
+	h.mu.Lock()
+	r := append(h.recent[topic], data)
+	if len(r) > recentPerTopic {
+		r = r[len(r)-recentPerTopic:]
+	}
+	h.recent[topic] = r
 	set := h.topics[topic]
 	clients := make([]*Client, 0, len(set))
 	for c := range set {
 		clients = append(clients, c)
 	}
-	h.mu.RUnlock()
+	h.mu.Unlock()
 	for _, c := range clients {
 		c.enqueue(data)
 	}

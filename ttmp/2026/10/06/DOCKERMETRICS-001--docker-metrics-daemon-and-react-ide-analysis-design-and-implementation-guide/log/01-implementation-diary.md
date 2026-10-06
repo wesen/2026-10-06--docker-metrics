@@ -647,3 +647,80 @@ clean, validated, pushed state.
 
 ### Technical details
 - Mutator timeout for restart/stop: 10s.
+
+## Step 15: `load` mode and a dockerized demo fleet (ump)
+
+The user asked for a mode that generates CPU/memory bursts so it can be
+dockerized and run as a few instances to test the dashboards. This step adds a
+`docker-metrics load` command, a Dockerfile, and a compose fleet.
+
+### Prompt Context
+**User prompt (verbatim):** "create a mode that runs and creates memory / cpu
+bursts, so we can dockerize it and run a few instances for testing our
+dashboards."
+**Assistant interpretation:** A workload generator subcommand plus container
+packaging that produces real, changing container metrics.
+**Inferred user intent:** A repeatable local environment to exercise the fleet
+view, charts, alerts and the Prometheus endpoint.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- `pkg/load/load.go`: profiles `cpu|mem|leak|mixed`; CPU burners with a duty
+  cycle to hit a target fraction of a core and optional periodic bursts; memory
+  grow/release (sawtooth) or grow/hold (leak) with pages touched so RSS is real.
+- `pkg/cli/load.go`: `docker-metrics load` with `--profile`, `--cpu`,
+  `--cpu-workers`, `--burst-period/-duration`, `--mem-peak/-step/-interval`,
+  `--hold-at-peak`, `--duration`, `--verbose`; SIGINT/SIGTERM aware.
+- `pkg/load/load_test.go`: all profiles run and terminate on duration; cancel
+  works; `touch` commits pages.
+- `Dockerfile`: multi-stage `golang:1.27-alpine` → `distroless:nonroot`,
+  `CGO_ENABLED=0`.
+- `docker-compose.yml`: a `collector` (docker socket mounted, port 8080) plus
+  `load-cpu`, `load-mem`, `load-leak`, `load-burst` generators.
+- `.dockerignore`: keeps `pkg/httpapi/dist` (needed for `go:embed`) while
+  excluding the repo-root `/dist`, `web/*`, `ttmp` and markdown.
+
+### Why
+- Real container metrics are the only meaningful dashboard test input; the
+  prototype used a browser simulation, so this is the production equivalent.
+- Profiles map to alert scenarios: `leak` triggers sustained-memory rules,
+  `cpu` triggers saturation rules, `mixed` feeds "everything at once".
+
+### What worked
+- `go test ./pkg/load/...` passes; the full gate stays green.
+- Local smoke: `load --profile mixed --duration 4s` allocated in steps and reset.
+- `docker build` succeeds; `docker compose config` is valid.
+- End-to-end with a real container: `docker stats` reported `dm-load-cpu
+  cpu=109.42% mem=87.7MiB`, and `poll --once` reported the same container at
+  `CPU% 68.64 MEM_MB 133.9`, proving the collector sees generated load.
+- `pkg/httpapi/dist` is now actually tracked by git (see the fix note below).
+
+### What didn't work
+- A pre-existing packaging bug surfaced while answering "does it embed the
+  built JS?": `git ls-files pkg/httpapi/dist` was empty because the template
+  `.gitignore` contains a broad `dist/` rule that also matched
+  `pkg/httpapi/dist`. A fresh clone would have failed `go:embed`. Fixed by
+  changing the rule to `/dist/` (repo root only) and committing the built assets.
+- A second bug surfaced in the same session: `Hub.Publish` overwrote `Type` to
+  `"frame"`, mislabeling `event`/`log`/`run` frames, so the IDE console never
+  showed run output and event frames were wrong. Fixed to default `Type` only
+  when empty, and added `TestWebSocketReplay` (recent-frame replay for late
+  subscribers) plus a per-topic replay buffer.
+- `byte(4096)` in the `touch` test overflowed; `touch` now writes `0xA5`.
+
+### What I learned
+- Committing an embedded asset directory needs an explicit ignore exception;
+  broad `dist/` ignore rules are a footgun for `go:embed`.
+
+### What should be done in the future
+- Add a `--mem-touch` option and a `leak` vari ant with a slow unbounded growth
+  for OOM tests; add compose profiles so `collector` can be run alone.
+
+### Code review instructions
+- Start at `pkg/load/load.go`, `pkg/cli/load.go`, `Dockerfile`,
+  `docker-compose.yml`, `pkg/hub/hub.go` (Type + replay).
+- Validate: `GOWORK=off go test ./... -count=1`; `docker compose up --build`.
+
+### Technical details
+- CPU duty cycle = period * target/workers; bursts run all workers at 100%.
+- Memory is touched one byte per 4096 to commit pages.

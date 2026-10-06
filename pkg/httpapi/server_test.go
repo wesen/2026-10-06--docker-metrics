@@ -103,6 +103,41 @@ func TestWebSocketSubscribe(t *testing.T) {
 	}
 }
 
+func TestWebSocketReplay(t *testing.T) {
+	st := store.NewMemory(8)
+	h := hub.New(nil)
+	srv := New(Config{Store: st, Manager: runtime.NewManager(st), Hub: h})
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	// Publish before anyone subscribes: the hub must replay recent frames.
+	h.Publish("events", hub.Frame{Type: "event", Kind: "restart", Data: map[string]any{"container": "web"}})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
+	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+	if err := conn.Write(ctx, websocket.MessageText, []byte(`{"type":"subscribe","topic":"events"}`)); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m map[string]any
+		_ = json.Unmarshal(data, &m)
+		if m["type"] == "event" {
+			return
+		}
+	}
+	t.Fatal("recent event frame was not replayed to the late subscriber")
+}
+
 func TestPromRegistryRendering(t *testing.T) {
 	p := newPromRegistry()
 	p.ingest(map[string]any{"prefix": "dock_"}, map[string]any{"series": []any{

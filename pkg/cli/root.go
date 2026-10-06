@@ -21,6 +21,7 @@ executed on the backend by a go-go-goja runtime.`,
 		newServeCmd(),
 		newRunCmd(),
 		newCheckCmd(),
+		newLoadCmd(),
 	)
 	return root
 }
