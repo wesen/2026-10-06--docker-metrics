@@ -151,3 +151,45 @@ func TestPromRegistryRendering(t *testing.T) {
 		}
 	}
 }
+
+func TestWebSocketReplaysOnlyLatestSnapshot(t *testing.T) {
+	st := store.NewMemory(8)
+	h := hub.New(nil)
+	srv := New(Config{Store: st, Manager: runtime.NewManager(st), Hub: h})
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	for i := 1; i <= 5; i++ {
+		h.Publish("dash:board", hub.Frame{Type: "snapshot", Value: map[string]any{"n": i}})
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
+	conn, _, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+	if err := conn.Write(ctx, websocket.MessageText, []byte(`{"type":"subscribe","topic":"dash:board"}`)); err != nil {
+		t.Fatal(err)
+	}
+	// Expect hello, then exactly one snapshot (n=5), then the subscribed ack.
+	var snaps []float64
+	for i := 0; i < 3; i++ {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m map[string]any
+		_ = json.Unmarshal(data, &m)
+		if m["type"] == "snapshot" {
+			v, _ := m["value"].(map[string]any)
+			n, _ := v["n"].(float64)
+			snaps = append(snaps, n)
+		}
+	}
+	if len(snaps) != 1 || snaps[0] != 5 {
+		t.Fatalf("want exactly the latest snapshot replayed (n=5), got %v", snaps)
+	}
+}

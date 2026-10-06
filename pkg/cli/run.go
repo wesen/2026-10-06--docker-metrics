@@ -127,6 +127,9 @@ func newRunCmd() *cobra.Command {
 				runCtx, cancel = context.WithTimeout(ctx, timeout)
 				defer cancel()
 			}
+			// Tick while scripts run so streams and watchers advance during
+			// awaits; the loop below only decides how long to keep going.
+			sess.StartTicker(runCtx)
 			for _, f := range args {
 				src, err := os.ReadFile(f)
 				if err != nil {
@@ -137,7 +140,6 @@ func newRunCmd() *cobra.Command {
 				}
 			}
 			if follow || sess.HasItems(runCtx) {
-				sess.StartTicker(runCtx)
 				if !follow {
 					// Wait until streams/watchers finish or the timeout fires.
 					for sess.HasItems(runCtx) && runCtx.Err() == nil {

@@ -6,8 +6,9 @@ dashboard("Board", { every: "2s", range: "15m" })
   .section("Numbers")
   .row(
     stat("CPU", all, cpu.pipe(pct, avg), { unit: "%", warn: gt(50), crit: gt(80) }),
-    gauge("Hottest", all, cpu.pipe(pct, max), { unit: "%", warn: gt(60), crit: gt(85) }),
-    kv("Facts", () => ({ containers: all.size, hosts: [...new Set(all.names())].length }))
+    // CPU is in cores, so one container can exceed 100%; scale the gauge to 4 cores.
+    gauge("Hottest", all, cpu.pipe(pct, max), { unit: "%", max: 400, warn: gt(150), crit: gt(300) }),
+    kv("Facts", () => ({ containers: all.size, hosts: new Set(all.names().map((n) => d.container(n).inspect().host)).size }))
   )
   .section("Detail")
   .row(

@@ -814,9 +814,16 @@
   // jsonSafe turns a snapshot into plain JSON: functions and comparator objects
   // (warn/crit) are dropped, and non-data JS objects are skipped. Without this
   // the snapshot cannot cross the Go boundary.
+  //
+  // The depth limit only guards against cycles. A snapshot is nested at least
+  // ten levels deep (snapshot > rows > row > widgets > widget > data > series >
+  // series item > pts > point > value), so a small limit silently empties
+  // line/area/sparks points and table cells.
+  const JSON_SAFE_MAX_DEPTH = 64;
   function jsonSafe(v, depth) {
     depth = depth || 0;
-    if (v == null || depth > 8) return depth > 8 ? undefined : v;
+    if (depth > JSON_SAFE_MAX_DEPTH) return undefined;
+    if (v == null) return v;
     const t = typeof v;
     if (t === "number" || t === "string" || t === "boolean") return v;
     if (t === "function") return undefined;

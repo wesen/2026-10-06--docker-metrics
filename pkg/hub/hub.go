@@ -120,11 +120,17 @@ func (h *Hub) Publish(topic string, frame Frame) {
 		return
 	}
 	h.mu.Lock()
-	r := append(h.recent[topic], data)
-	if len(r) > recentPerTopic {
-		r = r[len(r)-recentPerTopic:]
+	if frame.Type == "snapshot" {
+		// A snapshot is the complete state of a dashboard, so a late
+		// subscriber needs only the newest one, not a burst of stale boards.
+		h.recent[topic] = [][]byte{data}
+	} else {
+		r := append(h.recent[topic], data)
+		if len(r) > recentPerTopic {
+			r = r[len(r)-recentPerTopic:]
+		}
+		h.recent[topic] = r
 	}
-	h.recent[topic] = r
 	set := h.topics[topic]
 	clients := make([]*Client, 0, len(set))
 	for c := range set {

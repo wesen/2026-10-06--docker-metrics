@@ -259,6 +259,62 @@ dashboard("Board", { every: "0s", range: "15m" })
 	if _, ok := data["state"].(string); !ok {
 		t.Errorf("stat data should carry a state, got %#v", data["state"])
 	}
+
+	// Deeply nested widget data must survive the JS -> Go boundary. These
+	// assertions read the published (sanitised) snapshot, which is what the
+	// browser receives; a shallow jsonSafe depth limit used to empty them.
+	widget := func(tp string) map[string]any {
+		for _, r := range rows[1:] {
+			rm, _ := r.(map[string]any)
+			wl, _ := rm["widgets"].([]any)
+			for _, w := range wl {
+				wm, _ := w.(map[string]any)
+				if wm["type"] == tp {
+					d, _ := wm["data"].(map[string]any)
+					return d
+				}
+			}
+		}
+		t.Fatalf("no %s widget", tp)
+		return nil
+	}
+	lineSeries, _ := widget("line")["series"].([]any)
+	pointCount := 0
+	for _, s := range lineSeries {
+		sm, _ := s.(map[string]any)
+		pts, _ := sm["pts"].([]any)
+		for _, p := range pts {
+			pm, _ := p.(map[string]any)
+			if _, ok := pm["v"]; !ok {
+				t.Errorf("line point lost its value: %#v", p)
+			}
+			pointCount++
+		}
+	}
+	if pointCount == 0 {
+		t.Errorf("line widget has no points: %#v", lineSeries)
+	}
+	tableRows, _ := widget("table")["rows"].([]any)
+	if len(tableRows) == 0 {
+		t.Fatal("table widget has no rows")
+	}
+	for _, r := range tableRows {
+		rm, _ := r.(map[string]any)
+		cells, _ := rm["cells"].(map[string]any)
+		if _, ok := cells["cpu"]; !ok {
+			t.Errorf("table row lost its cells: %#v", r)
+		}
+	}
+	sparkRows, _ := widget("sparks")["rows"].([]any)
+	sparkPoints := 0
+	for _, r := range sparkRows {
+		rm, _ := r.(map[string]any)
+		pts, _ := rm["pts"].([]any)
+		sparkPoints += len(pts)
+	}
+	if sparkPoints == 0 {
+		t.Errorf("sparks widget has no points: %#v", sparkRows)
+	}
 }
 
 func containsStr(xs []string, s string) bool {

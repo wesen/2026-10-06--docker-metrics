@@ -99,6 +99,10 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 	s.runMu.Unlock()
 
 	go func() {
+		// Tick from the start, not after the script returns: a script that
+		// awaits (sleep, refresh) must still have its streams, watchers and
+		// dashboards evaluated while it is suspended.
+		sess.StartTicker(ctx)
 		start := time.Now()
 		err := sess.RunSource(ctx, req.Source)
 		if err != nil && ctx.Err() == nil {
@@ -106,7 +110,6 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 		} else if ctx.Err() == nil {
 			s.cfg.Hub.Publish(topic, hub.Frame{Type: "run", Run: id, Status: "ok", Message: msString(time.Since(start))})
 		}
-		sess.StartTicker(ctx)
 		<-ctx.Done()
 		_ = sess.Close(context.Background())
 		s.runMu.Lock()

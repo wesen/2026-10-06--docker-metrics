@@ -140,11 +140,8 @@ func (s *Server) StartDefaultDashboard(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := sess.RunSource(ctx, src); err != nil {
-		return err
-	}
 	sess.StartTicker(ctx)
-	return nil
+	return sess.RunSource(ctx, src)
 }
 
 // RecordEvent stores an event for the Events tab.
