@@ -1495,3 +1495,44 @@ the IDE's Run button was changed to stop the previous run.
 ### Technical details
 - Preset ids are the filename without the numeric prefix; groups appear in first-seen order of the sorted filenames.
 - tmux session `dm`: `collector` (`./dist/docker-metrics serve --listen 127.0.0.1:8080`), `fleet` (`docker compose up --no-build load-cpu load-mem load-leak load-burst`), `dashboard` (`scripts/live-dashboard.sh`, board id `load-lab`), `shell`.
+
+## Step 22: The IDE alternated between two dashboards
+
+### Prompt Context
+**User prompt (verbatim):** "why does it alternate through multiple dashboards, is that because it's running multiple presets? only run one"
+**Assistant interpretation:** Find what else is publishing boards into the IDE and make the IDE show a single board.
+**Inferred user intent:** The Dashboard tab shows the preset just run, and nothing else.
+**Commit (code):** 70974db — "fix(ide): Dashboard tab shows only the current run's board"
+
+### What I did
+- Subscribed to `dash:latest` for 8 s: `{ 'Load lab': 4, Saturation: 2 }`. Two publishers: the user's IDE run (Saturation) and the tmux `dashboard` window's run `tmux-board` (Load lab). The IDE was not stacking presets; Run already stops the previous IDE run.
+- `handleRun` now also publishes each snapshot to `run:<id>:dash` (`RunDashTopic`); the IDE subscribes to that topic for its current run and renders only it. Renamed the shadowing `id` parameter of the `PublishSnapshot` closure to `dashID`.
+- Added `TestRunSnapshotsOnRunTopic`.
+- Restarted the `collector` window; the `dashboard` window no longer starts a board, it prints the `scripts/live-dashboard.sh` command instead. Verified nothing publishes to `dash:latest` after the restart.
+
+### Why
+- `dash:latest` is server-global; any run, browser tab or API client publishes to it, so a per-client view must not read it.
+
+### What worked
+- Full Go gate green; `pnpm typecheck` and `pnpm build` clean.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The Step 19 decision to keep a board running in tmux interacted badly with the IDE's use of `dash:latest`; global "latest" topics are only safe for single-producer setups.
+
+### What was tricky to build
+- The `PublishSnapshot` closure parameter `id` shadowed the run id in `handleRun`; publishing to `run:`+id inside it would have used the dashboard id.
+
+### What warrants a second pair of eyes
+- `dash:latest` is still published and used by `/d` without an id; consider removing it.
+
+### What should be done in the future
+- A dashboards index page (`/d`) listing live boards by id, replacing the `dash:latest` fallback.
+
+### Code review instructions
+- `git show 70974db`; validate with `GOWORK=off go test ./pkg/httpapi/ -run TestRunSnapshotsOnRunTopic -v`.
+
+### Technical details
+- Topic: `run:<runId>:dash`, frame `{type:"snapshot", run, value}`.
