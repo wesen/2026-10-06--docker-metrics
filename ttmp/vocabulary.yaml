@@ -5,6 +5,16 @@ topics:
       description: Backend services
     - slug: websocket
       description: WebSocket lifecycle & events
+    - slug: docker
+      description: Docker daemon integration and container runtime
+    - slug: metrics
+      description: Metric collection, aggregation and storage
+    - slug: frontend
+      description: Web frontend and IDE surfaces
+    - slug: react
+      description: React application and component architecture
+    - slug: prometheus
+      description: Prometheus exposition and scraping
 docTypes:
     - slug: design-doc
       description: Structured rationale and architecture notes
@@ -16,6 +26,8 @@ docTypes:
       description: Ticket landing page
     - slug: skill
       description: Skill documentation (what it's for and when to use it)
+    - slug: log
+      description: Chronological implementation diary and dev log
 intent:
     - slug: long-term
       description: Likely to persist
