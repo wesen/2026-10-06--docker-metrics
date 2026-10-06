@@ -1369,3 +1369,63 @@ the Phase B/C commits.
 ### Technical details
 - Session `dm`: windows `collector` :8080, `fleet` (compose), `dashboard`
   (POST /api/v1/run), `shell`.
+
+## Step 20: Audit of the live board — four widgets were silently empty
+
+While writing the project report, the user asked whether dashboard presets
+exist, whether the running app shows proper dashboards, and whether the
+implementation has issues. Inspecting the live `dash:board` snapshot showed
+that the board published on time with no widget errors, yet the line, table
+and sparks widgets carried no data. This step fixes that and three related
+defects found in the same audit.
+
+### Prompt Context
+**User prompt (verbatim):** "Actually, do we have dashboard presets in the app, and is the app currently running and has proper dashboards? Do you see issues with the current implementation ?" followed by "do we have dashboard presets? let's create many more presets" and "btw commit at appropriate intervals and keep a detailed diary as you work (using the diary format from the skill)."
+**Assistant interpretation:** Verify the running system against its own output, fix what blocks dashboards from rendering correctly, then build a large preset library.
+**Inferred user intent:** Dashboards that actually render in the IDE, with many ready-made examples to start from.
+**Commit (code):** bee3a31 — "fix(dashboard): keep nested snapshot data, tick during scripts, replay latest snapshot"; a0bf25b — "fix(prelude): emit() delivers to d.on listeners as in the prototype"
+
+### What I did
+- Subscribed a Node WebSocket client to `dash:board` on the running server and printed each widget's data summary. Results: `line series=7 pts=0/0/0/0/0/0/0`, `table rows=7` with `cells: {}`, sparks rows without points, gauge `146.87` against a default max of 100, kv `hosts: 7`, events `items=0`, and 63 snapshots replayed to a new subscriber.
+- Raised `jsonSafe`'s depth limit from 8 to 64 (`JSON_SAFE_MAX_DEPTH`) in `pkg/runtime/prelude/engine.js`.
+- Extended `TestDashboardSnapshot` to assert line points, table cells and sparks points on the *published* snapshot.
+- Moved `StartTicker` before `RunSource` in `pkg/httpapi/run.go`, `StartDefaultDashboard` and `pkg/cli/run.go`.
+- Hub: `snapshot` frames replace the topic's replay buffer instead of appending; added `TestWebSocketReplaysOnlyLatestSnapshot`.
+- `emit(name)` now calls `d.emit(name, e)` so `d.on(...)` listeners fire; added `TestEmitReachesDockerListeners`.
+- Fixed `testdata/dashboards/dash-basic.js`: gauge `max: 400`, hosts counted from `inspect().host`.
+
+### Why
+- A snapshot nests values at depth 9–10 (snapshot > rows > row > widgets > widget > data > series > item > pts > point > v). `jsonSafe` returned `undefined` past depth 8, so the browser received structurally valid but empty charts and tables, with no error anywhere.
+- With the ticker started only after the script's top-level promise settled, a script suspended in `await sleep(...)` had no watcher, stream or dashboard evaluation during the sleep.
+- Snapshots are complete state; replaying 64 of them to a late subscriber is wasted work and briefly flashes stale boards.
+- The prototype's `emit` dispatched to Docker listeners; the port only logged, so every `d.on("alert", …)` example was dead code.
+
+### What worked
+- With the depth limit temporarily set back to 8, the extended test fails with `line widget has no points`, `table row lost its cells`, `sparks widget has no points`; with 64 it passes. The test therefore guards the regression.
+- `GOWORK=off go test ./... -count=1`, `go vet ./...` and `gofmt -l` are clean.
+
+### What didn't work
+- Probing the ticker-order bug with a `for await (const x of stream)` script on the live server returned `SyntaxError: (anonymous): Line 3:5 Unexpected token await`. goja does not support `for await…of`, so the prototype's stream-iteration presets cannot be ported as written; streaming presets must use sinks (`tap`, `ws`, `prometheus`).
+
+### What I learned
+- The original `TestDashboardSnapshot` already inspected the post-`jsonSafe` snapshot but asserted only the header, widget types and one stat value — exactly the shallow parts. A boundary test has to assert the deepest leaf, not the envelope.
+- Live data inspection found what the green test suite could not: "no errors" and "correct" are different properties of a snapshot.
+
+### What was tricky to build
+- Proving the depth bug from the outside: the snapshot frame had the right keys and no `error` fields, so the defect only showed when counting points per series. The root cause was found by counting nesting levels by hand against `jsonSafe`'s guard.
+
+### What warrants a second pair of eyes
+- Starting the ticker before `RunSource` means ticks interleave with the script's own awaits on the owner goroutine; `Owner.Call` serializes them, but a slow tick now delays script progress.
+- `emit` now forwards `e.rule` to `core.emitEvent`; confirm the events tab shows rule names as intended.
+
+### What should be done in the future
+- Port widget data shapes to a JSON schema and validate snapshots in tests rather than hand-picked assertions.
+- Support `for await` once goja does, or document the sink-based alternative in the DSL reference.
+
+### Code review instructions
+- `git show bee3a31 a0bf25b`. Start at `jsonSafe` in `pkg/runtime/prelude/engine.js`, then `Hub.Publish`, then the three `StartTicker` call sites.
+- Validate: `GOWORK=off go test ./... -count=1`.
+
+### Technical details
+- Snapshot depth of a line point value: 10 (0-based from the snapshot root). Table cell value: 9. Sparks point: 9.
+- Replay policy: `snapshot` frames keep 1 entry per topic; other frames keep 64.
