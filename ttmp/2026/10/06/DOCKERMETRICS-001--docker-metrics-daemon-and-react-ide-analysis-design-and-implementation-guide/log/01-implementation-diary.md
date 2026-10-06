@@ -1429,3 +1429,69 @@ defects found in the same audit.
 ### Technical details
 - Snapshot depth of a line point value: 10 (0-based from the snapshot root). Table cell value: 9. Sparks point: 9.
 - Replay policy: `snapshot` frames keep 1 entry per topic; other frames keep 64.
+
+## Step 21: A 46-preset library, executed by a test
+
+The IDE had 13 console presets and no dashboard presets. This step adds 33
+presets (46 in total, 22 of them dashboards), moves every preset into its own
+JavaScript file, and adds a Go test that executes all of them. Running the
+presets through the test exposed three more prelude defects, fixed here, and
+the IDE's Run button was changed to stop the previous run.
+
+### Prompt Context
+**User prompt (verbatim):** "do we have dashboard presets? let's create many more presets", then "btw commit at appropriate intervals and keep a detailed diary as you work (using the diary format from the skill)." and "once done, restart things in the tmux or so and tell me how i can test it"
+**Assistant interpretation:** Build a large, working preset library with an emphasis on dashboards, prove each preset runs, restart the demo session, and give test instructions.
+**Inferred user intent:** Open the IDE, pick any preset, press Run, and see a correct board.
+**Commit (code):** a0bf25b (emit listeners), d045f60 — "fix(prelude): synchronous custom metrics; non-finite numbers encode as null"; 2b8d648 — "feat(presets): 46 preset files executed by a Go test; live means running"; 06eb5b1 — "feat(web): load presets from files; Run stops the previous run"
+
+### What I did
+- Compared the v2 prototype's `PRESETS` with the IDE's. The prototype's presets assume its simulated fleet (`api-*`, `tier=backend`, `chaos.*`), so they were rewritten for real hosts: grouping by `label:com.docker.compose.project` / `label:com.docker.compose.service`, and selecting the demo fleet with the glob `*load-*`.
+- Wrote 46 files under `web/src/presets/files/NNN-id.js` with a `// @group`, `// @title`, `// @desc` header. Groups: Basics (5), Aggregation (4), Alerts (4), Streaming (4), Advanced (3), Scenarios (3), Sandbox (1), Dashboards (7), Dashboards · Resources (5: CPU, memory, network, block I/O, processes), Dashboards · Scenarios (10: load lab, leak hunt, noisy neighbours, capacity, health, TV wall, compare, single-container focus, efficiency, compose projects).
+- `web/src/presets/index.ts` bundles the files with `import.meta.glob("./files/*.js", { query: "?raw", import: "default", eager: true })` and parses the header; added `src/vite-env.d.ts`.
+- `pkg/runtime/presets_test.go` (`TestPresetsRun`) runs every file against a seeded fleet (two compose projects, two `*load-*` generators, an unlabeled container without a PID limit, an exited container without samples), with the ticker running, and fails on a run error, a `console.error`, a widget error or missing data, a dashboard without a snapshot, or a snapshot that `json.Marshal` rejects.
+- Prelude fixes: custom metrics receive a handle with a synchronous `read()`; `jsonSafe` maps NaN/±Infinity to `null`; default groups and watchers use `LIVE_STATES = {running, paused, restarting}` instead of excluding `"stopped"`.
+- IDE `run()`: stops the current run, clears logs and the last snapshot, switches to the Dashboard tab when the source calls `dashboard(`.
+- `scripts/live-dashboard.sh` replaces the `/tmp/live-dashboard.sh` helper from Step 19; it posts a preset with a fixed run id (default: Load lab, run `tmux-board`).
+- Recreated the tmux session `dm` (collector, fleet, dashboard, shell) with the new binary.
+- Ran every preset against the live server with a Node checker that subscribes to `run:<id>` and `dash:<id>`, posts the preset, and inspects the snapshot for errors and empty widgets.
+
+### Why
+- One file per preset gives a single source of truth for the drawer and the test, readable diffs, and syntax highlighting in editors.
+- A preset library is only useful if every entry runs; executing the files in CI is cheaper than discovering broken examples in the UI.
+- Two runs publishing to `dash:latest` overwrite each other's boards in the IDE tab, so Run must replace, not add.
+
+### What worked
+- `GOWORK=off go test ./... -count=1` green, including 46 `TestPresetsRun` subtests; `pnpm typecheck` and `pnpm build` clean; the bundle contains all 46 files.
+- Live check against the real fleet (7 containers): 46 of 46 presets run; all 22 dashboards publish snapshots in which every widget has data. The only two WARN lines were false positives (`032-leak-watch` intentionally prints real alerts with `console.error`; `099-scratch`'s comment contains `dashboard("t")`).
+
+### What didn't work
+- The first `TestPresetsRun` run failed six presets: four with `Cannot read property 'toFixed' of undefined or null` and two with `Cannot read property 'limit' of undefined`. Root cause: the matcher's default excluded only `state === "stopped"`, a state from the prototype's simulation that Docker never reports, so the exited seed container (no samples) entered every default group.
+- `050-custom` first failed with the same `limit` error even after the matcher fix was understood, because the original preset destructured `c.read(pids)`, which returned a Promise; that is the async custom-metric defect fixed in d045f60.
+- Two presets initially used `.data` on a single-container `history()` result; single-container history returns the point array, not a `Report`.
+- `pnpm -s typecheck` is rejected by this pnpm version (`unexpected argument '-s'`); used `pnpm typecheck`.
+
+### What I learned
+- goja has no `for await…of`, so streaming presets use `take(n)` with `tap()`.
+- Seed data for preset tests must include the awkward cases (exited containers, no labels, no PID limit); the happy-path seed in `manager_test.go` would not have found the live-state bug.
+
+### What was tricky to build
+- Writing presets that are useful on an arbitrary Docker host. There is no shared label vocabulary across hosts, so the presets rely on Docker Compose's own labels and degrade to empty-but-valid widgets (never errors) when a host has no compose projects or no load generators.
+- Verifying live dashboards without the tmux board's snapshots polluting the check: the checker subscribes to each preset's own `dash:<id>` (derived from the title slug or an explicit `id:`) and ignores frames replayed before its subscriptions are acknowledged.
+
+### What warrants a second pair of eyes
+- `LIVE_STATES` changes which containers every default group contains; paused containers are included because Docker still reports their stats.
+- Dashboard variables are still display-only, so `103-dash-ops-vars` is useful only by editing its defaults.
+- Presets with `.watch(...)` keep running until stopped; the IDE now stops them on the next Run, but runs started through the API or the script must be stopped explicitly.
+
+### What should be done in the future
+- A `POST` endpoint for dashboard variables and range so the header selects work.
+- A dashboards index page linking to `/d/<id>` for every live board.
+- A preset-level "expected output" assertion for the console presets (currently they are checked only for errors).
+
+### Code review instructions
+- Start at `web/src/presets/index.ts` and `pkg/runtime/presets_test.go`, then skim the preset files by group.
+- Validate: `GOWORK=off go test ./pkg/runtime/ -run TestPresetsRun -v -count=1`; `cd web && pnpm typecheck && pnpm build`; then in the IDE pick any Dashboards preset and press Run.
+
+### Technical details
+- Preset ids are the filename without the numeric prefix; groups appear in first-seen order of the sorted filenames.
+- tmux session `dm`: `collector` (`./dist/docker-metrics serve --listen 127.0.0.1:8080`), `fleet` (`docker compose up --no-build load-cpu load-mem load-leak load-burst`), `dashboard` (`scripts/live-dashboard.sh`, board id `load-lab`), `shell`.

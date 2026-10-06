@@ -99,3 +99,13 @@ Phase C: React widget interpreter (15 widget components + registry), DashboardVi
 ## 2026-10-06
 
 Restart the demo fleet in tmux with the v2 build (collector + load fleet + live dashboard window); recorded that dashboard snapshots publish only under serve.
+
+## 2026-10-06
+
+Dashboard fixes from a live-board audit (jsonSafe depth emptied line/table/sparks data, ticker started after scripts, stale snapshot replay, dead d.on listeners, async custom metrics, non-finite JSON, exited containers in default groups) and a 46-preset library (22 dashboards) stored as files and executed by TestPresetsRun; Run now stops the previous run.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/presets/files — One JavaScript file per preset
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/presets_test.go — Executes every preset against a seeded fleet
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/scripts/live-dashboard.sh — Runs a dashboard under serve
