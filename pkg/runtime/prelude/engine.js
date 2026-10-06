@@ -277,8 +277,13 @@
 
   /* ── selection ── */
   const glob = (p) => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+  // A container is live when Docker can report stats for it. The prototype's
+  // simulation used a "stopped" state; Docker reports exited, dead, created,
+  // removing, … instead, and those have no samples to read.
+  const LIVE_STATES = new Set(["running", "paused", "restarting"]);
+  const isLive = (s) => LIVE_STATES.has(s.state);
   function matcher(sel, any) {
-    const live = (s) => any || s.state !== "stopped";
+    const live = (s) => any || isLive(s);
     if (sel == null) return live;
     if (typeof sel === "string") {
       const r = glob(sel);
@@ -592,7 +597,7 @@
     }
     async tick() {
       for (const sim of this.group.sims()) {
-        if (sim.state === "stopped") continue;
+        if (!isLive(sim)) continue;
         const ctx = { sim, dockers: this.group.dockers };
         for (const r of this.rules) {
           const key = r.name + "|" + sim.name;
