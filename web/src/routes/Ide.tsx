@@ -28,11 +28,13 @@ export function Ide() {
   const dispatch = useAppDispatch();
   const { source, presetId, tab, selected, presetOpen, runId } = useAppSelector((s) => s.ui);
   const runStatus = useAppSelector((s) => s.stream.runStatus);
-  const dashboardLatest = useAppSelector((s) => s.dashboard.latest);
+  // Only this run's boards: dash:latest also carries other runs (e.g. the tmux board).
+  const runDashTopic = runId ? `run:${runId}:dash` : null;
+  const runDashboard = useAppSelector((s) => (runDashTopic ? s.dashboard.snapshots[runDashTopic] ?? null : null));
   const [runSource] = useRunSourceMutation();
   const [stopRun] = useStopRunMutation();
 
-  useStream(runId ? `run:${runId}` : null, ["dash:latest"]);
+  useStream(runId ? `run:${runId}` : null, runDashTopic ? [runDashTopic] : []);
 
   const run = async () => {
     // One run at a time: a previous run's streams and dashboard would keep
@@ -106,7 +108,7 @@ export function Ide() {
           </nav>
           <div className="view">
             {tab === "console" && <ConsolePanel />}
-            {tab === "dashboard" && <DashboardView snap={dashboardLatest} />}
+            {tab === "dashboard" && <DashboardView snap={runDashboard} />}
             {tab === "fleet" && <FleetGrid selected={selected} onSelect={(n) => dispatch({ type: "ui/select", payload: n })} />}
             {tab === "charts" && <ChartsPanel selected={selected} />}
             {tab === "events" && <EventsPanel />}

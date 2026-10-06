@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -191,5 +192,51 @@ func TestWebSocketReplaysOnlyLatestSnapshot(t *testing.T) {
 	}
 	if len(snaps) != 1 || snaps[0] != 5 {
 		t.Fatalf("want exactly the latest snapshot replayed (n=5), got %v", snaps)
+	}
+}
+
+func TestRunSnapshotsOnRunTopic(t *testing.T) {
+	st := store.NewMemory(8)
+	h := hub.New(nil)
+	srv := New(Config{Store: st, Manager: runtime.NewManager(st), Hub: h})
+	ts := httptest.NewServer(srv.Handler())
+	defer ts.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, "ws"+strings.TrimPrefix(ts.URL, "http")+"/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+	if err := conn.Write(ctx, websocket.MessageText, []byte(`{"type":"subscribe","topic":"run:r1:dash"}`)); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"runId":"r1","source":"dashboard(\"Mine\").row(text(\"t\", \"hi\")).show();"}`
+	resp, err := http.Post(ts.URL+"/api/v1/run", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	defer func() {
+		r, _ := http.Post(ts.URL+"/api/v1/run/r1/stop", "application/json", nil)
+		if r != nil {
+			r.Body.Close()
+		}
+	}()
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			t.Fatalf("no snapshot on run:r1:dash: %v", err)
+		}
+		var m map[string]any
+		_ = json.Unmarshal(data, &m)
+		if m["type"] == "snapshot" {
+			v, _ := m["value"].(map[string]any)
+			if m["topic"] != "run:r1:dash" || v["title"] != "Mine" {
+				t.Fatalf("unexpected snapshot frame: %v", m)
+			}
+			return
+		}
 	}
 }

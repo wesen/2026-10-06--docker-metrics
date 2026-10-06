@@ -76,9 +76,12 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 		Publish: func(t string, frame map[string]any) {
 			s.cfg.Hub.Publish(t, hub.Frame{T: int64Of(frame["t"]), Data: mapOf(frame["data"]), Value: frame["value"]})
 		},
-		PublishSnapshot: func(id string, snap map[string]any) {
-			s.cfg.Hub.Publish("dash:"+id, hub.Frame{Type: "snapshot", Value: snap})
+		PublishSnapshot: func(dashID string, snap map[string]any) {
+			s.cfg.Hub.Publish("dash:"+dashID, hub.Frame{Type: "snapshot", Value: snap})
 			s.cfg.Hub.Publish("dash:latest", hub.Frame{Type: "snapshot", Value: snap})
+			// The IDE follows only the boards of its own run; dash:latest mixes
+			// every run on the server (the tmux board, other tabs, API clients).
+			s.cfg.Hub.Publish(RunDashTopic(id), hub.Frame{Type: "snapshot", Run: id, Value: snap})
 		},
 		Event: func(name string, payload map[string]any) {
 			s.RecordEvent("emit", name, stringOf(payload["container"]), stringOf(payload["rule"]))
@@ -135,6 +138,9 @@ func (s *Server) handleRunStop(w http.ResponseWriter, r *http.Request) {
 	handle.cancel()
 	writeJSON(w, http.StatusOK, map[string]any{"stopped": true})
 }
+
+// RunDashTopic is the topic carrying the dashboard snapshots of one run.
+func RunDashTopic(runID string) string { return "run:" + runID + ":dash" }
 
 func stringOf(v any) string {
 	if s, ok := v.(string); ok {
