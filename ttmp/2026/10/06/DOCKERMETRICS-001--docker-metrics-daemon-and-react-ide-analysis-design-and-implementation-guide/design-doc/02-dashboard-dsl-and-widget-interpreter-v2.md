@@ -26,8 +26,8 @@ RelatedFiles:
       Note: v2 prototype specification
     - Path: repo://web/src/hooks/useStream.ts
       Note: WebSocket subscription for dashboard topics
-    - Path: web/src/organisms/widgets
-      Note: Where the widget interpreter (WR registry) will live
+    - Path: web/src/app/store.ts
+      Note: Redux store the dashboard slice will be added to
 ExternalSources:
     - local:dockermetrics-ide-v2.html
 Summary: Intern-facing design and implementation guide for the v2 dashboard DSL (dashboard()/widgets) and the JSON widget interpreter that renders dashboards on the React side.
