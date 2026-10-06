@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"sync"
 	"testing"
@@ -348,5 +349,56 @@ d.containers("web").watch(rule("always").when(cpu.is(gte(0))).then(emit("alert")
 		if !strings.Contains(logs, want) {
 			t.Errorf("listener output %q missing; logs:\n%s", want, logs)
 		}
+	}
+}
+
+func TestCustomMetricReadsSynchronously(t *testing.T) {
+	rec := &recorder{}
+	s, cancel := newTestSession(t, rec)
+	defer cancel()
+	src := `
+const headroom = metric("headroom-mb", (c) => (c.read(mem.limit) - c.read(mem)) / 1e6);
+const pidUse = metric("pid-use", (c) => { const p = c.read(pids); return p.limit ? p.current / p.limit : 0; });
+console.log("headroom", JSON.stringify(await docker().containers().read(headroom.pipe(round(3)))));
+console.log("piduse", await docker().container("web").read(pidUse));
+let msg = "";
+try { await docker().containers().read(metric("bad", async (c) => 1).pipe(avg)); } catch (e) { msg = e.message; }
+console.log("async", msg);
+`
+	if err := s.RunSource(context.Background(), src); err != nil {
+		t.Fatalf("RunSource: %v\n%s", err, rec.joined())
+	}
+	logs := rec.joined()
+	for _, want := range []string{`headroom {"api-1":1.797,"web":0}`, "piduse 0.11", "must be synchronous"} {
+		if !strings.Contains(logs, want) {
+			t.Errorf("missing %q in logs:\n%s", want, logs)
+		}
+	}
+}
+
+func TestSnapshotNonFiniteBecomesNull(t *testing.T) {
+	var got map[string]any
+	m := NewManager(seedStore())
+	s, err := m.NewSession(context.Background(), Options{
+		PublishSnapshot: func(_ string, snap map[string]any) { got = snap },
+		TickInterval:    time.Hour,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = s.Close(context.Background()) }()
+	// An empty group makes the heatmap's min/max ±Infinity.
+	src := `dashboard("Empty").row(heatmap("none", docker().containers("no-such-*"), cpu.pipe(pct))).show();`
+	if err := s.RunSource(context.Background(), src); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3 && got == nil; i++ {
+		_ = s.Tick(context.Background())
+	}
+	if got == nil {
+		t.Fatal("no snapshot")
+	}
+	if _, err := json.Marshal(got); err != nil {
+		t.Fatalf("snapshot must be JSON-encodable: %v", err)
 	}
 }

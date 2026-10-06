@@ -182,7 +182,16 @@
       const h = ctx.sim.hist;
       return h.slice(Math.max(0, h.length - n - 1)).map((x) => ({ t: x.t, v: src.get(x, ctx.sim) }));
     }
-    if (src.kind === "custom") return [{ t: now(), v: src.fn(new Container(ctx.dockers, ctx.sim.name, ctx.sim.host)) }];
+    if (src.kind === "custom") {
+      // Series evaluation is synchronous, so the custom function receives a
+      // handle whose read() returns the value directly (no await needed).
+      const c = new Container(ctx.dockers, ctx.sim.name, ctx.sim.host);
+      const handle = { name: c.name, host: c.host, inspect: () => c.inspect(), read: (spec, ...mods) => c._read(spec, mods) };
+      const v = src.fn(handle);
+      if (v && typeof v.then === "function")
+        throw new Error('metric("' + m.name + '"): the function must be synchronous; c.read() returns its value directly');
+      return [{ t: now(), v }];
+    }
     const a = src.a instanceof Metric ? seriesOf(src.a, ctx, n) : null;
     const b = src.b instanceof Metric ? seriesOf(src.b, ctx, n) : null;
     if (!a && !b) return [{ t: now(), v: src.f(src.a, src.b) }];
@@ -827,7 +836,9 @@
     if (depth > JSON_SAFE_MAX_DEPTH) return undefined;
     if (v == null) return v;
     const t = typeof v;
-    if (t === "number" || t === "string" || t === "boolean") return v;
+    // NaN and ±Infinity are not JSON; encoding/json rejects the whole snapshot.
+    if (t === "number") return isFinite(v) ? v : null;
+    if (t === "string" || t === "boolean") return v;
     if (t === "function") return undefined;
     if (t !== "object") return undefined;
     if (v instanceof Metric || v instanceof Pred || v instanceof Group || v instanceof Widget || v instanceof Dashboard) return undefined;
