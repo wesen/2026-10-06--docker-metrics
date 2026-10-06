@@ -2,7 +2,11 @@ module github.com/go-go-golems/docker-metrics
 
 go 1.26.6
 
-require github.com/go-go-golems/logcopter v0.1.1
+require (
+	github.com/go-go-golems/logcopter v0.1.1
+	github.com/spf13/cobra v1.10.2
+	golang.org/x/crypto v0.53.0
+)
 
 require (
 	github.com/BurntSushi/toml v1.3.2 // indirect
@@ -79,7 +83,6 @@ require (
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
-	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/tj/go-naturaldate v1.3.0 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
@@ -88,7 +91,6 @@ require (
 	github.com/yuin/goldmark v1.8.2 // indirect
 	github.com/yuin/goldmark-emoji v1.0.5 // indirect
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect

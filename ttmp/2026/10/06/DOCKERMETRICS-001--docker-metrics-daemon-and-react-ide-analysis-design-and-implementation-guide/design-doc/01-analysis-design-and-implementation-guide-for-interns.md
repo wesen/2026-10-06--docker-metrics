@@ -395,15 +395,12 @@ onlineCPUs     = cpu_stats.online_cpus  ?? len(cpu_stats.cpu_usage.percpu_usage)
 cpuPercent     = (cpuDelta / systemDelta) * onlineCPUs * 100
 ```
 
-The result is *percent of all host cores*. A value of `100` means one full core
-on a single-core host, or 1/8 of a core on an 8-core host. The prototype models
-`cpu` as a fraction of one core (`0.42` = 42% of a core), so we must decide the
-canonical unit and keep it consistent.
-
-**Decision for docker-metrics:** the store keeps CPU as **fraction of one core**
-(the prototype's unit), computed as `cpuPercent / 100`. `pct` then renders it as
-a percentage of one core. This matches every prototype preset. Document this in
-the module docs, because mixing the two conventions is the most likely bug.
+The result is *percent of one core*: `100` means one fully used core, `800`
+means eight fully used cores. This is the `docker stats` convention. docker-metrics
+stores the value divided by 100, i.e. the **fraction of one core**, matching the
+prototype's unit (`0.42` = 42% of a core), so `pct` renders it as a percentage
+of one core. This is implemented in `pkg/docker/normalize.go` (`CPUFraction`) and
+locked by a unit test; do not mix the two conventions.
 
 ### 6.3 Memory working set
 

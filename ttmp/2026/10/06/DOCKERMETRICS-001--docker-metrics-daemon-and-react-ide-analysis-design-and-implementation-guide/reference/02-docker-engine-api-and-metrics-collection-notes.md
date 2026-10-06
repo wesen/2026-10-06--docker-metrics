@@ -154,28 +154,22 @@ normalized sample at time `t`.
 ### 4.1 CPU (fraction of one core)
 
 ```text
-cpuDelta    = cur.total_usage   - prev.total_usage
-systemDelta = cur.system_cpu_usage - prev.system_cpu_usage
+cpuDelta    = cur.total_usage        - prev.total_usage
+systemDelta = cur.system_cpu_usage   - prev.system_cpu_usage
 onlineCpus  = cur.online_cpus ?? len(cur.percpu_usage) ?? 1
 
-cpuPercentHost = (cpuDelta / systemDelta) * onlineCpus * 100
-cpuFraction    = cpuPercentHost / 100          # fraction of ONE core? no —
+cpuPercentOneCore = (cpuDelta / systemDelta) * onlineCpus * 100    # docker stats
+cpuFraction       = (cpuDelta / systemDelta) * onlineCpus          # 1.0 == one full core
 ```
 
-**Careful.** The formula above gives *percent of all host CPUs*. If you want
-*percent of one core* (the prototype's unit), do **not** multiply by
-`onlineCpus`:
-
-```text
-cpuPercentOneCore = (cpuDelta / systemDelta) * 100
-cpuFraction       = cpuPercentOneCore / 100        # 1.0 == one full core
-```
-
-`docker stats` reports "percent of all cores", i.e. it multiplies by
-`onlineCpus`. docker-metrics deliberately stores the *fraction of one core* so
-that a single busy container reports `1.0` on any machine; the `pct` op then
-renders `100%` of a core. Write both conventions down in code comments and pick
-one test to lock it.
+`docker stats` shows *percent of one core*: a single saturated core reads
+`100%`, and using all eight cores of an eight-core host reads `800%`. That is
+why the formula multiplies by `onlineCpus` — it converts the host-wide ratio
+`cpuDelta/systemDelta` into core units. docker-metrics stores the same value
+divided by 100, i.e. the **fraction of one core** (`1.0` = one busy core), so a
+single busy container reads `1.0` on any machine and `pct` renders it as `100%`
+of a core. This is implemented in `CPUFraction` in `pkg/docker/normalize.go` and
+locked by `TestCPUFractionIsFractionOfOneCore`.
 
 Guard against a zero `systemDelta` (too-fast consecutive polls):
 

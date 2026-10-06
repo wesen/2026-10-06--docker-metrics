@@ -3,13 +3,13 @@
 ## TODO
 
 ### Phase 1 — Docker client and collector
-- [ ] `pkg/docker/host.go`: parse `unix://`, `tcp://`, `ssh://`, default local socket.
-- [ ] `pkg/docker/client.go`: Go client wrapper (moby client or net/http + ssh), fakeable.
-- [ ] `pkg/docker/normalize.go`: CPU/mem/net/io/pids arithmetic (§6 of the design doc).
+- [x] `pkg/docker/host.go`: parse `unix://`, `tcp://`, `ssh://`, default local socket.
+- [x] `pkg/docker/client.go`: Go client wrapper (net/http + ssh), fakeable via the `collector.Source` interface.
+- [x] `pkg/docker/normalize.go`: CPU/mem/net/io/pids arithmetic (§6 of the design doc).
 - [ ] Capture cgroup v1 and v2 stats fixtures under `testdata/docker/`.
-- [ ] `pkg/store/`: per-container ring buffer + `Store` interface.
-- [ ] `pkg/collector/`: poll list + stats + events, concurrency semaphore, timeouts.
-- [ ] `pkg/cli/poll.go`: one-shot and streaming output (glazed table/json).
+- [x] `pkg/store/`: per-container ring buffer + `Store` interface.
+- [x] `pkg/collector/`: poll list + stats + events, concurrency semaphore, timeouts.
+- [x] `pkg/cli/poll.go`: one-shot and streaming output (table/json).
 
 ### Phase 2 — Metric DSL on the backend (go-go-goja)
 - [ ] `pkg/runtime/module/`: native `dockermetrics` module (`containers`, `samples`, `now`, `limit`, `emit`, `console`).
