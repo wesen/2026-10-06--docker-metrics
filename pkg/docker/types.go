@@ -29,13 +29,13 @@ func (c ListContainer) Name() string {
 
 // Stats is GET /containers/{id}/stats?stream=0.
 type Stats struct {
-	Read        string      `json:"read"`
-	PreCPUStats CPUStats    `json:"precpu_stats"`
-	CPUStats    CPUStats    `json:"cpu_stats"`
-	MemoryStats MemoryStats `json:"memory_stats"`
+	Read        string             `json:"read"`
+	PreCPUStats CPUStats           `json:"precpu_stats"`
+	CPUStats    CPUStats           `json:"cpu_stats"`
+	MemoryStats MemoryStats        `json:"memory_stats"`
 	Networks    map[string]NetStat `json:"networks"`
-	BlkioStats  BlkioStats  `json:"blkio_stats"`
-	PIDsStats   PIDsStats   `json:"pids_stats"`
+	BlkioStats  BlkioStats         `json:"blkio_stats"`
+	PIDsStats   PIDsStats          `json:"pids_stats"`
 }
 
 type CPUStats struct {

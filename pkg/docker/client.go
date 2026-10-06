@@ -297,6 +297,38 @@ func (c *Client) Events(ctx context.Context, since int64) (io.ReadCloser, error)
 	return resp.Body, nil
 }
 
+// Restart restarts a container.
+func (c *Client) Restart(ctx context.Context, id string, timeoutSeconds int) error {
+	return c.post(ctx, c.url(fmt.Sprintf("/containers/%s/restart?t=%d", id, timeoutSeconds)))
+}
+
+// Stop stops a container.
+func (c *Client) Stop(ctx context.Context, id string, timeoutSeconds int) error {
+	return c.post(ctx, c.url(fmt.Sprintf("/containers/%s/stop?t=%d", id, timeoutSeconds)))
+}
+
+// Start starts a container.
+func (c *Client) Start(ctx context.Context, id string) error {
+	return c.post(ctx, c.url("/containers/"+id+"/start"))
+}
+
+func (c *Client) post(ctx context.Context, url string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode >= 400 {
+		return &APIError{Status: resp.StatusCode}
+	}
+	return nil
+}
+
 // Event is one Docker daemon event.
 type Event struct {
 	Type   string `json:"Type"`

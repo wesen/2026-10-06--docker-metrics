@@ -591,3 +591,59 @@ not a CDN-loaded single file.
 ### Technical details
 - Route split is by `window.location.pathname` (`/ide` → IDE).
 - Dev proxy target: `127.0.0.1:8080`.
+
+## Step 14: Phase 5 — gated mutations, formatting and wrap-up (ump)
+
+This step closes the loop on safety: rule actions (`restart`/`stop`/`start`) are
+now wired to the Docker client but blocked unless the daemon runs with
+`--allow-mutations`. It also formats the tree, runs the full validation gate and
+updates the ticket tasks.
+
+### Prompt Context
+**User prompt (verbatim):** see Step 10.
+**Assistant interpretation:** Finish the safety boundary and leave the repo in a
+clean, validated, pushed state.
+**Inferred user intent:** A working daemon whose destructive powers are opt-in.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- `pkg/docker/client.go`: `Restart`, `Stop`, `Start` plus a generic `post`.
+- `pkg/httpapi`: `Config.AllowMutations` and `Config.Mutator`; `handleRun` now
+  wires `Action` to the mutator and records/publishes an event per mutation.
+- `pkg/cli/serve.go`: builds a `Mutator` that resolves a container by name to a
+  host client and calls restart/stop/start.
+- `pkg/runtime/manager_test.go`: `TestMutationsGatedByFlag` proves the default
+  blocks mutations and `AllowMutations: true` allows `stop:web`.
+- `gofmt -w` across all tracked Go files.
+
+### Why
+- The JS sandbox removes ambient authority, but container mutation is a new
+  authority granted by the DSL; making it opt-in keeps the default safe.
+
+### What worked
+- Full gate passes: `go build ./...`, `go vet ./...`, `gofmt -l` clean, and
+  `go test ./... -count=1` green across collector, docker, httpapi and runtime.
+
+### What didn't work
+- No failures this step.
+
+### What I learned
+- The prelude's `Group.stop()` already routes through `core.action` with the
+  container names, so the Go gate needed no DSL change.
+
+### What warrants a second pair of eyes
+- Mutation id resolution assumes container names are unique per host; a
+  name collision across hosts picks the first host client. Acceptable for v1.
+
+### What should be done in the future
+- Add a per-script interrupt/watchdog budget; add SQLite persistence; add
+  collector self-metrics; validate a GoReleaser snapshot before the first tag.
+
+### Code review instructions
+- Start at `pkg/cli/serve.go` (Mutator), `pkg/httpapi/run.go` (Action) and
+  `pkg/runtime/manager_test.go` (gating test).
+- Validate: `GOWORK=off go test ./... -count=1` and
+  `GOWORK=off go run ./cmd/docker-metrics serve --allow-mutations`.
+
+### Technical details
+- Mutator timeout for restart/stop: 10s.

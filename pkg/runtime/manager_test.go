@@ -144,3 +144,29 @@ func TestCompileRejectsSyntaxError(t *testing.T) {
 		t.Fatal("expected a syntax error")
 	}
 }
+
+func TestMutationsGatedByFlag(t *testing.T) {
+	ctx := context.Background()
+	run := func(allow bool) []string {
+		var actions []string
+		m := NewManager(seedStore())
+		s, err := m.NewSession(ctx, Options{
+			AllowMutations: allow,
+			Action:         func(a string, n []string, _ map[string]any) { actions = append(actions, a+":"+strings.Join(n, ",")) },
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = s.Close(context.Background()) }()
+		if err := s.RunSource(ctx, `docker().container("web").stop();`); err != nil {
+			t.Fatal(err)
+		}
+		return actions
+	}
+	if got := run(false); len(got) != 0 {
+		t.Fatalf("mutations must be blocked by default, got %v", got)
+	}
+	if got := run(true); len(got) != 1 || got[0] != "stop:web" {
+		t.Fatalf("expected stop:web, got %v", got)
+	}
+}

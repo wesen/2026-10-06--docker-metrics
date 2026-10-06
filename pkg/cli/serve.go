@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,8 +12,8 @@ import (
 
 	"github.com/go-go-golems/docker-metrics/pkg/collector"
 	"github.com/go-go-golems/docker-metrics/pkg/docker"
-	"github.com/go-go-golems/docker-metrics/pkg/hub"
 	"github.com/go-go-golems/docker-metrics/pkg/httpapi"
+	"github.com/go-go-golems/docker-metrics/pkg/hub"
 	"github.com/go-go-golems/docker-metrics/pkg/runtime"
 	"github.com/go-go-golems/docker-metrics/pkg/store"
 	"github.com/spf13/cobra"
@@ -21,10 +22,10 @@ import (
 func newServeCmd() *cobra.Command {
 	flags := &commonFlags{}
 	var (
-		listen           string
-		staticDir        string
-		noDefaultDash    bool
-		allowMutations   bool
+		listen         string
+		staticDir      string
+		noDefaultDash  bool
+		allowMutations bool
 	)
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -71,6 +72,21 @@ func newServeCmd() *cobra.Command {
 				StaticDir:        staticDir,
 				DefaultDashboard: !noDefaultDash,
 				AllowMutations:   allowMutations,
+				Mutator: func(action, container string) error {
+					for _, cl := range clients {
+						if ct, ok := st.Container(cl.Name(), container); ok {
+							switch action {
+							case "restart":
+								return cl.Restart(ctx, ct.ID, 10)
+							case "stop":
+								return cl.Stop(ctx, ct.ID, 10)
+							case "start":
+								return cl.Start(ctx, ct.ID)
+							}
+						}
+					}
+					return fmt.Errorf("no such container: %s", container)
+				},
 			})
 			col.OnEvent(func(ev docker.Event) {
 				srv.RecordEvent(ev.Action, "docker event", ev.Actor.Attributes["name"], "")

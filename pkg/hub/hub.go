@@ -13,19 +13,19 @@ import (
 
 // Frame is the wire shape published to a topic.
 type Frame struct {
-	Type    string         `json:"type"`
-	Topic   string         `json:"topic,omitempty"`
-	T       int64          `json:"t,omitempty"`
-	Data    map[string]any `json:"data,omitempty"`
-	Value   any            `json:"value,omitempty"`
-	Kind    string         `json:"kind,omitempty"`
-	Text    string         `json:"text,omitempty"`
-	Run     string         `json:"run,omitempty"`
-	Level   string         `json:"level,omitempty"`
-	Status  string         `json:"status,omitempty"`
-	Message string         `json:"message,omitempty"`
-	Rule    string         `json:"rule,omitempty"`
-	Overflow bool          `json:"overflow,omitempty"`
+	Type     string         `json:"type"`
+	Topic    string         `json:"topic,omitempty"`
+	T        int64          `json:"t,omitempty"`
+	Data     map[string]any `json:"data,omitempty"`
+	Value    any            `json:"value,omitempty"`
+	Kind     string         `json:"kind,omitempty"`
+	Text     string         `json:"text,omitempty"`
+	Run      string         `json:"run,omitempty"`
+	Level    string         `json:"level,omitempty"`
+	Status   string         `json:"status,omitempty"`
+	Message  string         `json:"message,omitempty"`
+	Rule     string         `json:"rule,omitempty"`
+	Overflow bool           `json:"overflow,omitempty"`
 }
 
 const (

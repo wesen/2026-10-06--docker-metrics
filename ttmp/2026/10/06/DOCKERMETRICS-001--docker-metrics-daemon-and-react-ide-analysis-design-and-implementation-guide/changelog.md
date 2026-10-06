@@ -52,3 +52,11 @@ Phase 4: React + TypeScript IDE with atomic design, Redux Toolkit, RTK Query and
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/httpapi/static.go — Embedded SPA serving
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/web/src/app/api.ts — RTK Query API client
+
+## 2026-10-06
+
+Phase 5: rule mutations wired to the Docker client and gated behind --allow-mutations (with a gating test); gofmt and full validation gate green.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/cli/serve.go — Gated container mutator

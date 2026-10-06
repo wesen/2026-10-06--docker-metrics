@@ -50,6 +50,8 @@ type Config struct {
 	DefaultDashboard bool
 	// AllowMutations lets dashboards restart/stop/start containers.
 	AllowMutations bool
+	// Mutator performs a container mutation (restart|stop|start).
+	Mutator func(action, container string) error
 }
 
 // Server is the docker-metrics HTTP surface.

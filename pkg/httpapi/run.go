@@ -59,6 +59,20 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 				s.prom.ingest(opts, payload)
 			}
 		},
+		Action: func(action string, names []string, opts map[string]any) {
+			if !s.cfg.AllowMutations {
+				return
+			}
+			for _, n := range names {
+				s.RecordEvent(action, "rule action", n, "")
+				s.cfg.Hub.Publish("events", hub.Frame{Type: "event", Kind: action, Data: map[string]any{"container": n, "at": time.Now().Unix()}})
+				if s.cfg.Mutator != nil {
+					if err := s.cfg.Mutator(action, n); err != nil {
+						s.cfg.Log.Warn("mutation failed", "action", action, "container", n, "err", err)
+					}
+				}
+			}
+		},
 		Publish: func(t string, frame map[string]any) {
 			s.cfg.Hub.Publish(t, hub.Frame{T: int64Of(frame["t"]), Data: mapOf(frame["data"]), Value: frame["value"]})
 		},

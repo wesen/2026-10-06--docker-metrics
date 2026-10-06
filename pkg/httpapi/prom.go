@@ -11,9 +11,9 @@ import (
 // prometheus() sink and renders the Prometheus text exposition format.
 type promRegistry struct {
 	mu     sync.Mutex
-	values map[string]float64          // series key -> value
-	lines  map[string][]string         // metric name -> rendered lines
-	names  []string                    // metric names in first-seen order
+	values map[string]float64  // series key -> value
+	lines  map[string][]string // metric name -> rendered lines
+	names  []string            // metric names in first-seen order
 }
 
 func newPromRegistry() *promRegistry {

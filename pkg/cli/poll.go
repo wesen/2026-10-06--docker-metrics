@@ -128,16 +128,16 @@ func newPollCmd() *cobra.Command {
 }
 
 type row struct {
-	Host      string  `json:"host"`
-	Name      string  `json:"name"`
-	State     string  `json:"state"`
-	CPU       float64 `json:"cpu"`
-	MemMB     float64 `json:"memMB"`
-	LimitMB   float64 `json:"limitMB"`
-	RxPerSec  float64 `json:"rxPerSec"`
-	TxPerSec  float64 `json:"txPerSec"`
-	PIDs      int     `json:"pids"`
-	Restarts  int     `json:"restarts"`
+	Host     string  `json:"host"`
+	Name     string  `json:"name"`
+	State    string  `json:"state"`
+	CPU      float64 `json:"cpu"`
+	MemMB    float64 `json:"memMB"`
+	LimitMB  float64 `json:"limitMB"`
+	RxPerSec float64 `json:"rxPerSec"`
+	TxPerSec float64 `json:"txPerSec"`
+	PIDs     int     `json:"pids"`
+	Restarts int     `json:"restarts"`
 }
 
 func printStore(st store.Store, format string) error {
