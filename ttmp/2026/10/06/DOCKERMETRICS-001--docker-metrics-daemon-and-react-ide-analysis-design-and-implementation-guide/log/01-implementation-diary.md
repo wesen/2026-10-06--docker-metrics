@@ -175,8 +175,18 @@ The imported filename contained spaces; renamed it to
 
 ## Step 9 — reMarkable delivery
 
-Pending at the time of writing; see the changelog and the upload receipt in the
-session summary.
+Uploaded the guide as a single PDF with a table of contents:
+
+```bash
+remarquee upload bundle \
+  design-doc/01-...md reference/01-...md reference/02-...md playbook/01-...md \
+  --name "DOCKERMETRICS-001 Docker Metrics Intern Guide" \
+  --remote-dir "/ai/2026/10/06/DOCKERMETRICS-001" --toc-depth 2 --non-interactive
+```
+
+Result: `OK: uploaded DOCKERMETRICS-001 Docker Metrics Intern Guide.pdf ->
+/ai/2026/10/06/DOCKERMETRICS-001`. Cloud delivery confirmed; physical device
+sync is not something this command proves.
 
 ## Remaining blockers
 
