@@ -69,3 +69,7 @@ Add load mode (cpu/mem/leak/mixed) plus Dockerfile and docker-compose demo fleet
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/docker-compose.yml — dockerized demo fleet
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/load/load.go — CPU/memory workload generator
+
+## 2026-10-06
+
+Backfill the implementation diary to the full investigation format (Steps 2-15) and record the deferral of the custom-dashboard JS API; reverted its partial implementation.

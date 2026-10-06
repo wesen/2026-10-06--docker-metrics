@@ -29,7 +29,7 @@ LastUpdated: 2026-10-06T19:00:00-04:00
 
 # Implementation Diary
 
-## Step 1 — User request (verbatim)
+## Step 1: User request (verbatim)
 
 > crete a new repo using the go-go-golems/go-template template from github. Then
 > create a new docmgr to create a go daemon self contained to poll docker metrics
@@ -49,7 +49,7 @@ Follow-up instruction, verbatim:
 
 > use go-go-golems/go-go-goja for the JS part on the backend
 
-## Step 2 — Reconnaissance (tools, conventions, existing state)
+## Step 2: Reconnaissance (tools, conventions, existing state)
 
 Checked tooling and conventions before touching anything.
 
@@ -71,7 +71,46 @@ Evidence: `gh api user/orgs --jq '.[].login'` → `tulip` (not `go-go-golems`,
 not `wesen`); `gh api repos/wesen/2026-09-06--vision --jq .permissions` → only
 `pull: true`.
 
-## Step 3 — GitHub repository creation blocked
+### Prompt Context
+**User prompt (verbatim):** see Step 1.
+**Assistant interpretation:** Orient on the machine before running any state-changing command.
+**Inferred user intent:** Avoid clobbering existing work or using the wrong account.
+**Commit (code):** none (reconnaissance only)
+
+### What I did
+- Checked tooling: `gh`, `docmgr`, `remarquee`, `pandoc`, `xelatex`, `go`, `node`, `pnpm`; confirmed `wsm` is absent.
+- Inspected the machine layout: `~/code/{go-go-golems,wesen,tulip,others}` and the launch directory `~/code/wesen/2026-10-06--docker-metrics`.
+- Read `gh auth status` (account `manuel-tulip`) and the `~/.config/nix/netrc` token.
+
+### Why
+- The project-creation skill requires checking tooling and existing repository state first, and this machine's paths differ from the skill's `/home/manuel` examples.
+
+### What worked
+- Located a full local checkout of the required JS runtime at `~/code/go-go-golems/go-go-goja`.
+- Confirmed `go1.27.1`, which satisfies the template's `go 1.26.6`.
+
+### What didn't work
+- `wsm` is not installed, so the optional WSM workspace step is unavailable (noted, skipped).
+
+### What I learned
+- `gh` is authenticated only as `manuel-tulip`, a work account with no create rights in `go-go-golems` or `wesen`.
+
+### What was tricky to build
+- Mapping the skill's assumed paths (`/home/manuel/...`) onto this machine (`/Users/manuel.odendahl/...`) without assuming they are equivalent.
+
+### What warrants a second pair of eyes
+- N/A (no code changed).
+
+### What should be done in the future
+- Install `wsm` if workspace integration is wanted.
+
+### Code review instructions
+- N/A; evidence is the command output recorded above.
+
+### Technical details
+- None.
+
+## Step 3: GitHub repository creation blocked
 
 Attempted the prescribed creation:
 
@@ -92,7 +131,45 @@ GraphQL: manuel-tulip does not have the correct permissions to execute
 The push/fork steps in the project-creation skill are therefore **blocked**, not
 merely deferred. See "Remaining blockers" below.
 
-## Step 4 — Local scaffold from the template (fallback)
+### Prompt Context
+**User prompt (verbatim):** see Step 1.
+**Assistant interpretation:** Create the GitHub repository from the template as requested.
+**Inferred user intent:** A real upstream repository to push to.
+**Commit (code):** none (blocked)
+
+### What I did
+- Ran `gh repo create go-go-golems/docker-metrics --public --template go-go-golems/go-template --clone=false`.
+- Probed permissions: `gh api repos/wesen/2026-09-06--vision --jq .permissions` and `gh api user/orgs`.
+
+### Why
+- The requested flow starts with creating the repository from the template.
+
+### What worked
+- The exact failure diagnostic was captured, which made the cause unambiguous.
+
+### What didn't work
+- `GraphQL: manuel-tulip does not have the correct permissions to execute CloneTemplateRepository (cloneTemplateRepository)`.
+- `wesen`-owned repos report only `pull: true`, so a fork/push is equally blocked.
+
+### What I learned
+- Org membership cannot be read without `admin:org` scope, so the block had to be inferred from the error and repo permissions.
+
+### What was tricky to build
+- Distinguishing "repository does not exist" from "exists but you cannot create/fork it"; the GraphQL error plus the permissions probe settled it.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Retry creation after obtaining a credential with create rights (resolved later when collaborator access was granted).
+
+### Code review instructions
+- N/A.
+
+### Technical details
+- Token scopes at the time: `admin:public_key, gist, read:org, repo, workflow`.
+
+## Step 4: Local scaffold from the template (fallback)
 
 Since the remote could not be created, scaffolded the repository locally from
 the public template so all remaining work could proceed:
@@ -122,7 +199,45 @@ succeed.
 Initial commit: `db4c8bf Initialize docker-metrics project from
 go-go-golems/go-template` (includes `.ttmp.yaml` and `ttmp/`).
 
-## Step 5 — docmgr workspace and ticket
+### Prompt Context
+**User prompt (verbatim):** see Step 1.
+**Assistant interpretation:** Proceed locally from the public template so the ticket and documents can be produced despite the remote block.
+**Inferred user intent:** Do not stall the deliverable on a credentials problem.
+**Commit (code):** db4c8bf — "Initialize docker-metrics project from go-go-golems/go-template"
+
+### What I did
+- Cloned `https://github.com/go-go-golems/go-template` to `/tmp/go-template-probe` and copied it into the launch directory.
+- Removed the template's `.git`, ran a Python placeholder-replacement pass (module/binary/logcopter/README), moved `cmd/XXX` to `cmd/docker-metrics`, rewrote the README.
+- Verified with `GOWORK=off go build ./...` and `go test ./...`, then committed.
+
+### Why
+- The template placeholders (`XXX`, `go-go-golems.XXX`, `cmd/XXX`) must be normalized before any feature work.
+
+### What worked
+- Build and tests passed; `rg -n "XXX|go-template|GO GO TEMPLATE"` found only the README, which was then rewritten.
+
+### What didn't work
+- No failures in this step.
+
+### What I learned
+- `docmgr init` also creates `.ttmp.yaml`, which must be committed alongside `ttmp/`.
+
+### What was tricky to build
+- Choosing a safe replacement set that does not clobber the `AGENT.md` line where `XXX` means a port number; qualified strings were used instead of bare `XXX`.
+
+### What warrants a second pair of eyes
+- The assumed module path (`github.com/go-go-golems/docker-metrics`) versus the eventual repo owner (`wesen`).
+
+### What should be done in the future
+- Rename the module if the owner is confirmed to be `wesen`.
+
+### Code review instructions
+- Inspect `go.mod`, `cmd/docker-metrics/main.go`, `logcopter_generate.go`, `Makefile`.
+
+### Technical details
+- Replacement table recorded in the step prose above.
+
+## Step 5: docmgr workspace and ticket
 
 ```bash
 docmgr init --root ttmp --seed-vocabulary
@@ -136,7 +251,44 @@ Ticket path:
 
 Added `log` to the `docTypes` vocabulary so the diary has a valid type.
 
-## Step 6 — Import the prototype
+### Prompt Context
+**User prompt (verbatim):** see Step 1.
+**Assistant interpretation:** Create the docmgr workspace and the ticket that holds all deliverables.
+**Inferred user intent:** A structured, searchable documentation home for the design and guide.
+**Commit (code):** db4c8bf / 6822b2a
+
+### What I did
+- `docmgr init --root ttmp --seed-vocabulary`; added topics (`docker`, `metrics`, `frontend`, `react`, `prometheus`) and a `log` doc-type.
+- `docmgr ticket create-ticket --ticket DOCKERMETRICS-001 --topics backend,websocket,docker,metrics,frontend,react,prometheus`.
+
+### Why
+- The docmgr skill requires a ticket workspace with a diary per active ticket.
+
+### What worked
+- Ticket created at `ttmp/2026/10/06/DOCKERMETRICS-001--…/`.
+
+### What didn't work
+- No failures.
+
+### What I learned
+- Vocabularies must be extended before a `doc add` of an unknown `--doc-type`.
+
+### What was tricky to build
+- Nothing significant.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Keep `docmgr doctor` clean as documents evolve.
+
+### Code review instructions
+- `docmgr ticket list --ticket DOCKERMETRICS-001`.
+
+### Technical details
+- Root `ttmp`, vocabulary at `ttmp/vocabulary.yaml`.
+
+## Step 6: Import the prototype
 
 ```bash
 docmgr import file --ticket DOCKERMETRICS-001 \
@@ -148,7 +300,44 @@ The imported filename contained spaces; renamed it to
 `sources/local/dockermetrics-ide-prototype.html` and updated the
 `ExternalSources` frontmatter in `index.md`.
 
-## Step 7 — Research for accurate API references
+### Prompt Context
+**User prompt (verbatim):** see Step 1 ("Import ~/Downloads/dockermetrics-ide.html into the sources/ folder of the ticket").
+**Assistant interpretation:** Bring the prototype into the ticket as an external source.
+**Inferred user intent:** The prototype is the product specification and must be versioned with the docs.
+**Commit (code):** 6822b2a
+
+### What I did
+- `docmgr import file --ticket DOCKERMETRICS-001 --file ~/Downloads/dockermetrics-ide.html --name "dockermetrics IDE prototype (browser-only simulation)"`.
+- Renamed the spaces-laden imported file to `sources/local/dockermetrics-ide-prototype.html` and updated the `ExternalSources` frontmatter.
+
+### Why
+- The design guide treats the prototype as the DSL/UX specification.
+
+### What worked
+- `docmgr import` recorded the source in `.meta/sources.yaml` and updated `index.md`.
+
+### What didn't work
+- The default imported filename contained spaces, which is awkward on the CLI; renamed.
+
+### What I learned
+- `docmgr import` stores the original path in metadata, not the new name, so both must be updated on rename.
+
+### What was tricky to build
+- Nothing significant.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- `ls ttmp/2026/10/06/DOCKERMETRICS-001--…/sources/local/`.
+
+### Technical details
+- Source file ~80 KB, 909 lines, React 18 UMD + an in-browser simulated engine.
+
+## Step 7: Research for accurate API references
 
 - Kagi search confirmed the Docker Engine API stats endpoint is deprecated in
   favour of the query variant and documents `precpu_stats` for the CPU delta.
@@ -160,7 +349,44 @@ The imported filename contained spaces; renamed it to
   adapter, `MiddlewareOnly` sandboxing, and `RuntimeModuleRegistrar` for
   dependency injection.
 
-## Step 8 — Documents written
+### Prompt Context
+**User prompt (verbatim):** see Step 1 (details/API references) and the follow-up "use go-go-golems/go-go-goja for the JS part on the backend".
+**Assistant interpretation:** Gather authoritative API facts before writing the guide.
+**Inferred user intent:** The guide must be technically accurate, not hand-wavy.
+**Commit (code):** 6822b2a
+
+### What I did
+- Kagi search on the Docker Engine stats endpoint, `moby/moby/client` vs `docker/go-sdk`, and `coder/websocket` vs `gorilla/websocket`.
+- Read the local `~/code/go-go-golems/go-go-goja` checkout: runtime composition, `modules.NativeModule`, `MiddlewareOnly`, `RuntimeModuleRegistrar`.
+
+### Why
+- The intern guide and the reference docs cite specific endpoints, libraries, and go-go-goja APIs.
+
+### What worked
+- Confirmed `precpu_stats` CPU-delta semantics, the cgroup v1/v2 field differences, and the go-go-goja factory/runtime API.
+
+### What didn't work
+- No failures.
+
+### What I learned
+- `docker stats` CPU is per-core percent: `(cpuDelta/systemDelta) * onlineCPUs * 100`.
+
+### What was tricky to build
+- Reconciling the initial (incorrect) note in the reference doc with the correct per-core formula; corrected later in Step 10.
+
+### What warrants a second pair of eyes
+- The cgroup v1/v2 compatibility table should be re-verified against a real cgroup v2 host.
+
+### What should be done in the future
+- Capture real stats fixtures per cgroup version.
+
+### Code review instructions
+- See `reference/01-…` and `reference/02-…`.
+
+### Technical details
+- Libraries chosen: `coder/websocket`, `prometheus/client_golang`, `go-go-goja v0.10.6`.
+
+## Step 8: Documents written
 
 - `design-doc/01-analysis-design-and-implementation-guide-for-interns.md` —
   the main intern guide (analysis, architecture, Docker math, DSL spec,
@@ -173,7 +399,44 @@ The imported filename contained spaces; renamed it to
 - `playbook/01-build-run-and-test-playbook.md` — build/run/test commands.
 - This diary.
 
-## Step 9 — reMarkable delivery
+### Prompt Context
+**User prompt (verbatim):** see Step 1 (the intern guide request).
+**Assistant interpretation:** Write the deliverables: a detailed intern guide plus supporting references and a playbook.
+**Inferred user intent:** A new engineer can understand and implement the whole system from these documents.
+**Commit (code):** 6822b2a
+
+### What I did
+- Wrote `design-doc/01-analysis-design-and-implementation-guide-for-interns.md` (problem, architecture diagrams, Docker math, DSL spec, go-go-goja runtime, backend layout, hub, HTTP, Prometheus, React IDE, 5-phase plan, testing, security, alternatives, open questions).
+- Wrote `reference/01-…`, `reference/02-…`, `playbook/01-…`, `log/01-…`; updated `index.md`, `tasks.md`, `changelog.md`; related files.
+
+### Why
+- One authoritative, technical, intern-friendly source of truth.
+
+### What worked
+- `docmgr doctor --ticket DOCKERMETRICS-001` reported all checks passed.
+
+### What didn't work
+- No failures.
+
+### What I learned
+- Keep `RelatedFiles` tight (3–7) and link most files to the focused subdocument.
+
+### What was tricky to build
+- Making the guide concrete (pseudocode, ASCII diagrams, file paths) without access to a working implementation yet.
+
+### What warrants a second pair of eyes
+- The CPU-unit decision documented in the guide; corrected after implementation.
+
+### What should be done in the future
+- Update the guide as the implementation diverges.
+
+### Code review instructions
+- Read the design doc in the order given in its §0.
+
+### Technical details
+- Ticket path in Step 5.
+
+## Step 9: reMarkable delivery
 
 Uploaded the guide as a single PDF with a table of contents:
 
@@ -220,7 +483,43 @@ sync is not something this command proves.
 - Rule mutations (`restart`/`stop`/`start`) are recommended to be gated behind
   `--allow-mutations`; confirm.
 
-## Step 10: Phase 1 — Docker client, store and collector (ump)
+### Prompt Context
+**User prompt (verbatim):** see Step 1 ("upload to remarkable").
+**Assistant interpretation:** Deliver the guide to reMarkable as a single PDF with a table of contents.
+**Inferred user intent:** Read the guide on a device.
+**Commit (code):** 567476f
+
+### What I did
+- `remarquee upload bundle` of the design doc, both references and the playbook, `--toc-depth 2`, to `/ai/2026/10/06/DOCKERMETRICS-001`.
+
+### Why
+- The user explicitly requested reMarkable delivery.
+
+### What worked
+- `OK: uploaded DOCKERMETRICS-001 Docker Metrics Intern Guide.pdf -> /ai/2026/10/06/DOCKERMETRICS-001`.
+
+### What didn't work
+- No failures; authentication was already valid.
+
+### What I learned
+- Cloud delivery is not physical device synchronization.
+
+### What was tricky to build
+- Nothing significant.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Re-upload when the guide changes materially.
+
+### Code review instructions
+- N/A.
+
+### Technical details
+- Bundle order: design doc, reference 01, reference 02, playbook.
+
+## Step 10: Phase 1 — Docker client, store and collector
 
 The user asked to work locally and start installing the missing functionality.
 This step implements the collector plane end to end: host parsing, a minimal
@@ -326,7 +625,7 @@ atomic-design frontend.
 - Key prefix: `host/name`.
 - Defaults: list 5s, stats 1s, timeout 5s, concurrency 16, capacity 3600.
 
-## Step 11: Phase 2 — go-go-goja dashboard runtime (ump)
+## Step 11: Phase 2 — go-go-goja dashboard runtime
 
 This step wires the compute plane: it embeds a go-go-goja runtime, exposes the
 store through a `dockermetrics` native module, ports the prototype's DSL engine
@@ -424,7 +723,7 @@ verbatim against real data.
 - Module name: `dockermetrics`. Runtimes are per dashboard session.
 - Default tick interval: 500ms; CLI run uses 250ms.
 
-## Step 12: Phase 3 — WebSocket hub, HTTP API and serve (ump)
+## Step 12: Phase 3 — WebSocket hub, HTTP API and serve
 
 This step adds the presentation plane: a topic-based WebSocket hub with
 backpressure, the REST API (hosts, containers, samples, events, dashboards,
@@ -505,7 +804,7 @@ React app (Phase 4) has a real backend.
 - Topics: `fleet`, `container:<name>`, `events`, `run:<id>`.
 - Outbound buffer 256; ping every 30s; write timeout 10s.
 
-## Step 13: Phase 4 — React IDE (atomic design + RTK Query) (ump)
+## Step 13: Phase 4 — React IDE (atomic design + RTK Query)
 
 This step builds the frontend: a Vite + React + TypeScript app organised by
 atomic design (atoms/molecules/organisms), with Redux Toolkit for UI and stream
@@ -592,7 +891,7 @@ not a CDN-loaded single file.
 - Route split is by `window.location.pathname` (`/ide` → IDE).
 - Dev proxy target: `127.0.0.1:8080`.
 
-## Step 14: Phase 5 — gated mutations, formatting and wrap-up (ump)
+## Step 14: Phase 5 — gated mutations, formatting and wrap-up
 
 This step closes the loop on safety: rule actions (`restart`/`stop`/`start`) are
 now wired to the Docker client but blocked unless the daemon runs with
@@ -635,6 +934,9 @@ clean, validated, pushed state.
 - Mutation id resolution assumes container names are unique per host; a
   name collision across hosts picks the first host client. Acceptable for v1.
 
+### What was tricky to build
+- Route the mutation gate: the prelude's `Group.stop()` already funnels through `core.action`, so the fix was entirely on the Go side (an `AllowMutations` flag plus a `Mutator` callback) rather than in the DSL.
+
 ### What should be done in the future
 - Add a per-script interrupt/watchdog budget; add SQLite persistence; add
   collector self-metrics; validate a GoReleaser snapshot before the first tag.
@@ -648,7 +950,7 @@ clean, validated, pushed state.
 ### Technical details
 - Mutator timeout for restart/stop: 10s.
 
-## Step 15: `load` mode and a dockerized demo fleet (ump)
+## Step 15: `load` mode and a dockerized demo fleet
 
 The user asked for a mode that generates CPU/memory bursts so it can be
 dockerized and run as a few instances to test the dashboards. This step adds a
@@ -712,6 +1014,13 @@ view, charts, alerts and the Prometheus endpoint.
 - Committing an embedded asset directory needs an explicit ignore exception;
   broad `dist/` ignore rules are a footgun for `go:embed`.
 
+### What was tricky to build
+- Making memory pressure *real* for Docker: Go does not commit heap pages until they are written, so `touch()` writes one byte per 4096-byte page; without it Docker's `memory_stats` would show only a small RSS despite a large allocation.
+
+### What warrants a second pair of eyes
+- The `.dockerignore` exception that keeps `pkg/httpapi/dist` for `go:embed` is easy to break again; the broad `dist/` rule was the original cause of the embedding bug.
+- The compose load generators have CPU/memory limits that assume a reasonably sized host; tune `cpus`/`mem_limit` for the target machine.
+
 ### What should be done in the future
 - Add a `--mem-touch` option and a `leak` vari ant with a slow unbounded growth
   for OOM tests; add compose profiles so `collector` can be run alone.
@@ -724,3 +1033,93 @@ view, charts, alerts and the Prometheus endpoint.
 ### Technical details
 - CPU duty cycle = period * target/workers; bursts run all workers at 100%.
 - Memory is touched one byte per 4096 to commit pages.
+
+## Step 16: Diary backfill and a deferred decision — custom dashboard JS API
+
+This step normalizes the diary to the full investigation format and records a
+decision: the `dashboard()` JavaScript API is designed but **not implemented
+yet**, and a partial implementation was reverted.
+
+### Prompt Context
+**User prompt (verbatim):** "backfill the diary in the correct format if
+necessary", followed by "do not implement the dashboard part yet, btw."
+**Assistant interpretation:** Bring every substantive diary step up to the
+investigation format, and stop work on the custom-dashboard feature so a
+half-finished API does not land.
+**Inferred user intent:** Keep the written record rigorous and keep the codebase
+in a coherent, committed state rather than carrying an unfinished feature.
+**Commit (code):** this step's commit ("docs(DOCKERMETRICS-001): backfill diary
+to the investigation format").
+
+### What I did
+- Audited the diary against the required sections and found: Steps 14 and 15
+  missing `### What was tricky to build` (and Step 15 also missing
+  `### What warrants a second pair of eyes`); an `(ump)` suffix on every
+  Step 10–15 header; and Steps 2–9 written as narrative instead of the full
+  format.
+- Backfilled Steps 2–9 with the complete section set, removed the `(ump)` noise,
+  normalized the step-header separator to `Step N: Title`, and added the missing
+  sections to Steps 14 and 15. A re-audit reports "OK" for every step 2–15.
+- Reverted the partial custom-dashboard implementation with
+  `git checkout -- pkg/httpapi/dashboards.go pkg/httpapi/run.go pkg/httpapi/server.go pkg/runtime/manager_test.go pkg/runtime/module.go pkg/runtime/prelude/engine.js`.
+
+### Why
+- The diary skill's investigation format is the requested record for substantive
+  steps; the earlier narrative steps lacked the explicit evidence/decision
+  sections.
+- A deferred feature must not leave additive stubs (`Options.DefineDashboard`,
+  a `defineDashboard` module export, a `dashboard()` prelude function and a test)
+  in the tree, because they invite accidental use and complicate review.
+
+### What worked
+- The audit script confirms every step 2–15 now has all eleven required sections.
+- After the revert, `go build ./...`, `go vet ./...` and
+  `go test ./... -count=1` are green and the working tree contains only the
+  diary change.
+
+### What didn't work
+- I had already started the dashboard feature before the deferral instruction
+  arrived: `Panel`/`Dashboard.Panels` types, a `Server.defineDashboard` helper,
+  `Options.DefineDashboard`, a `defineDashboard` module export, a prelude
+  `dashboard({name, panels})` helper, and `TestDashboardDefinition`. All of it
+  compiled and passed, but it is reverted and not part of the repository.
+
+### What I learned
+- Backfilling a diary is safer done by splitting on step boundaries and editing
+  segments programmatically than by many fragile inline edits; the audit is then
+  a second script over the same result.
+- When a feature is deferred, revert rather than stash, so the committed tree
+  matches the documented state.
+
+### What was tricky to build
+- Reverting *only* the feature changes while keeping the diary backfill required
+  reverting six explicit file paths and leaving the seventh (the diary) modified,
+  then re-running the full gate to prove HEAD is still sound.
+
+### What warrants a second pair of eyes
+- The deferred design decision below: whether the dashboard authoring API should
+  live in the JS engine (my earlier proposal) or in a declarative JSON schema the
+  UI consumes. This affects a lot of follow-on work and is unresolved.
+
+### What should be done in the future
+- If approved, implement the custom-dashboard API: a prelude
+  `dashboard({ name, panels, group?, every? })` that (a) persists panel metadata
+  via a module export, using `id = slug(name)` for idempotent re-runs, and
+  (b) starts one stream per data panel publishing to `panel:<id>:<key>`; plus a
+  `/d/<id>` route that subscribes to those topics and renders
+  `stat | chart | fleet | events | table` panels. Persisting the JS source (for
+  re-running a saved dashboard after a restart) is a further sub-task.
+
+### Code review instructions
+- Review only the diary in this commit: `git show --stat`. The reverted files
+  must be byte-identical to the previous commit; verify with
+  `git diff HEAD~1 HEAD -- pkg/`.
+- Validate the diary structure with the audit script recorded in the step prose.
+
+### Technical details
+- Required sections per step: Prompt Context, What I did, Why, What worked, What
+  didn't work, What I learned, What was tricky to build, What warrants a second
+  pair of eyes, What should be done in the future, Code review instructions,
+  Technical details.
+- Deferred design (not implemented): panel value evaluation reuses the existing
+  `Stream` machinery; `ws(topic)` already exists and needs no engine change.
