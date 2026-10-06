@@ -1,0 +1,3 @@
+package docker_metrics
+
+//go:generate go tool logcopter-gen -area-prefix go-go-golems.docker-metrics -strip-prefix github.com/go-go-golems/docker-metrics ./pkg/...
