@@ -325,3 +325,101 @@ atomic-design frontend.
 ### Technical details
 - Key prefix: `host/name`.
 - Defaults: list 5s, stats 1s, timeout 5s, concurrency 16, capacity 3600.
+
+## Step 11: Phase 2 — go-go-goja dashboard runtime (ump)
+
+This step wires the compute plane: it embeds a go-go-goja runtime, exposes the
+store through a `dockermetrics` native module, ports the prototype's DSL engine
+into JavaScript as a prelude, and adds `run`/`check` commands. It was validated
+against the live Docker daemon.
+
+### Prompt Context
+**User prompt (verbatim):** see Step 10. A follow-up instruction also told us the
+dashboard JS must run on the backend via `go-go-golems/go-go-goja`, which is what
+this step implements.
+**Assistant interpretation:** Build the JS execution plane and the data leaves it
+needs, then expose it through the CLI.
+**Inferred user intent:** No recompile to add a metric; the prototype's DSL works
+verbatim against real data.
+**Commit (code):** recorded after this entry.
+
+### What I did
+- Added `github.com/go-go-golems/go-go-goja v0.10.6`.
+- `pkg/runtime/prelude/engine.js`: a port of the prototype's `DM` engine. It
+  defines `Metric`, `Pred`, `Group`/`Container`/`Docker`/`fleet`, op vocabulary
+  (`pct mb kb gb round of rate avg sum min max p50 p95 p99 count`), selectors,
+  `by/last/since/bucket`, `Report`, `Rule`/`Watcher`, `Stream`, sinks
+  (`prometheus statsd file tap json`), the console shim, `sleep`, `spark`, and a
+  Go-driven item registry (`__tick`, `__stopAll`, `__hasItems`, `__dmFinish`).
+  Data comes from `require("dockermetrics")` instead of the simulation.
+- `pkg/runtime/module.go`: a `RuntimeModuleRegistrar` registering the
+  `dockermetrics` module (`now`, `maxSamples`, `containers`, `samples`, `log`,
+  `clearLog`, `sink`, `emitEvent`, `action`, `_finish`, `after`) and the
+  per-runtime `moduleState`.
+- `pkg/runtime/manager.go`: `Manager`/`Session` using
+  `engine.NewRuntimeFactoryBuilder().WithModules(...).UseModuleMiddleware(MiddlewareOnly("dockermetrics")).Build()`
+  and `factory.NewRuntime`, evaluating the prelude once, then `RunSource`,
+  `Compile`, `Tick`, `HasItems`, `StartTicker`, `StopAll`, `Close`.
+- `pkg/cli/run.go`: `run` (live store from `--host`, `--follow`, `--timeout`,
+  `--allow-mutations`) and `check` (syntax validation).
+- `testdata/dashboards/{one-metric,aggregate,stream}.js`: runnable fixtures.
+- `pkg/runtime/manager_test.go`: integration tests over a fake store.
+
+### Why
+- Keeping the DSL in JavaScript preserves the prototype's exact semantics and
+  means Go only provides leaves. Two implementations of the DSL would diverge.
+- The native module is pull-only (`containers`, `samples`) so JS never gets
+  Docker authority; `MiddlewareOnly("dockermetrics")` enforces it.
+
+### What worked
+- `GOWORK=off go test ./pkg/runtime/... -count=1` passes: reads, pipes, rates,
+  combines, predicates, `by()`, `history`/`bucket`, error taxonomy, stream ticks,
+  and compile rejection.
+- Live `run` over the local daemon printed real values, e.g.
+  `dagger-engine-v0.20.3 cpu 0.0001 -> 0.0057 %` and `mem MB 239.2842`.
+- Live `run --follow --timeout 3s` streamed frames once per second.
+- `check testdata/dashboards/*.js` reports OK for all fixtures.
+
+### What didn't work
+- `.to(...)` did not register a stream: the prototype auto-started streams with
+  `setTimeout`, which the prelude does not have. Fixed by starting the stream in
+  `.to()` and `.watch()`.
+- `HasItems` always returned false: it returned a `goja.Value` and the type
+  assertion to `bool` failed. Fixed by returning `res.ToBoolean()`.
+- `check` reported `SyntaxError: Unexpected identifier` for dashboards with
+  top-level `await`, because `goja.Compile` compiles a plain script. Fixed by
+  compiling the same async-IIFE wrapper `RunSource` uses.
+- Flag collision: `run`'s `--timeout` clashed with the shared per-request
+  `--timeout`. Renamed the shared flag to `--request-timeout`.
+
+### What I learned
+- go-go-goja's owner/event-loop model runs `Call` on the VM goroutine and drains
+  microtasks, so `await` on already-resolved promises (our whole prelude) settles
+  during `RunString`; a JS-side `__dmFinish` callback is a reliable completion
+  signal.
+
+### What was tricky to build
+- Bridging JS ticks to Go: the prelude keeps an item registry and Go drives it
+  with `__tick()` on a ticker via `Owner.Call`, so streams and watchers do not
+  depend on JS timers.
+- `after(ms)` (for `sleep`) resolves a goja Promise from a Go goroutine via
+  `Owner.Post`.
+
+### What warrants a second pair of eyes
+- `MiddlewareOnly("dockermetrics")` plus go-go-goja's implicit data-only default
+  modules: confirm the effective module set is what the sandbox intends.
+- The `run` CLI does a single `PollOnce`, so streamed values are static; the
+  daemon must poll continuously (Phase 3).
+
+### What should be done in the future
+- Port the remaining prototype presets as fixtures and assert their shapes.
+- Emit a `runId` and stream frames to the hub (Phase 3/4).
+
+### Code review instructions
+- Start at `pkg/runtime/prelude/engine.js` and `pkg/runtime/module.go`.
+- Validate: `GOWORK=off go test ./pkg/runtime/... -count=1` and
+  `GOWORK=off go run ./cmd/docker-metrics run testdata/dashboards/one-metric.js`.
+
+### Technical details
+- Module name: `dockermetrics`. Runtimes are per dashboard session.
+- Default tick interval: 500ms; CLI run uses 250ms.

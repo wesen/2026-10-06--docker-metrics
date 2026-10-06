@@ -25,3 +25,12 @@ Phase 1: Docker host parsing, minimal Engine API client (unix/tcp/ssh), stats no
 
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/collector/collector.go — Poll and event orchestration
 - /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/docker/normalize.go — CPU/memory/network/io normalization
+
+## 2026-10-06
+
+Phase 2: go-go-goja runtime with a dockermetrics native module, ported DSL prelude, run/check commands and runtime integration tests. Validated live against the local daemon.
+
+### Related Files
+
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/module.go — dockermetrics native module
+- /Users/manuel.odendahl/code/wesen/2026-10-06--docker-metrics/pkg/runtime/prelude/engine.js — ported DSL engine

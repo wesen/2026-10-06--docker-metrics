@@ -29,7 +29,7 @@ func (f *commonFlags) register(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&f.hosts, "host", nil, "Docker host (repeatable): unix:///var/run/docker.sock, tcp://host:2375, ssh://user@host")
 	cmd.Flags().DurationVar(&f.statsInterval, "stats-interval", time.Second, "how often to poll container stats")
 	cmd.Flags().DurationVar(&f.listInterval, "list-interval", 5*time.Second, "how often to refresh the container list")
-	cmd.Flags().DurationVar(&f.timeout, "timeout", 5*time.Second, "per-request timeout")
+	cmd.Flags().DurationVar(&f.timeout, "request-timeout", 5*time.Second, "per-request timeout")
 	cmd.Flags().IntVar(&f.concurrency, "concurrency", 16, "max concurrent stats requests per host")
 	cmd.Flags().IntVar(&f.capacity, "capacity", 3600, "samples retained per container")
 }
