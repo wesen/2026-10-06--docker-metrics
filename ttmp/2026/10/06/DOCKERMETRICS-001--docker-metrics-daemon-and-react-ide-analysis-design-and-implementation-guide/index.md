@@ -22,10 +22,11 @@ RelatedFiles:
       Note: Project build and structure conventions
 ExternalSources:
     - local:dockermetrics-ide-prototype.html
-Summary: "Design and implementation guide for a self-contained Go daemon that polls Docker container metrics, streams a live dashboard over WebSocket, exposes Prometheus, and runs user-authored dashboards in a backend go-go-goja JS runtime with a React IDE mode."
-WhatFor: "One place to understand the whole system: collection, DSL, goja runtime, WebSocket hub, HTTP API, Prometheus, React IDE, and the phased build plan."
-WhenToUse: "Start here when onboarding to the project or resuming implementation."
-LastUpdated: 2026-10-06T19:00:00-04:00
+    - local:dockermetrics-ide-v2.html
+Summary: Design and implementation guide for a self-contained Go daemon that polls Docker container metrics, streams a live dashboard over WebSocket, exposes Prometheus, and runs user-authored dashboards in a backend go-go-goja JS runtime with a React IDE mode.
+LastUpdated: 2026-10-06T15:26:39.450193-04:00
+WhatFor: 'One place to understand the whole system: collection, DSL, goja runtime, WebSocket hub, HTTP API, Prometheus, React IDE, and the phased build plan.'
+WhenToUse: Start here when onboarding to the project or resuming implementation.
 ---
 
 # Docker Metrics Daemon and React IDE — Analysis, Design and Implementation Guide

@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>dockermetrics IDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>:root{--bg:#e8ebee;--panel:#f5f6f7;--panel2:#e0e4e8;--fg:#14181c;--mut:#5b6670;--line:#c9d0d6;--acc:#b7791f;--accfg:#fff;--ok:#1f8a4c;--warn:#a8660a;--bad:#c0392b;--ed:#fbfcfc;
+--k:#7b3fa0;--s:#2a7a3b;--n:#b4560f;--c:#7b8893;--f:#1d5fa8;--a:#0b7f8c;--p:#3a4650;--sans:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;--fs:13px;--lh:20px}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0a0f13;--panel:#10171d;--panel2:#18222b;--fg:#dbe3ea;--mut:#8493a0;--line:#223039;--acc:#e8b339;--accfg:#1a1405;--ok:#52c882;--warn:#e8b339;--bad:#f0685a;--ed:#0c1318;--k:#c792ea;--s:#a5d6a0;--n:#f2a65e;--c:#5f7384;--f:#7cb7ff;--a:#4fd1c5;--p:#b8c4cf}}
+:root[data-theme="dark"]{--bg:#0a0f13;--panel:#10171d;--panel2:#18222b;--fg:#dbe3ea;--mut:#8493a0;--line:#223039;--acc:#e8b339;--accfg:#1a1405;--ok:#52c882;--warn:#e8b339;--bad:#f0685a;--ed:#0c1318;--k:#c792ea;--s:#a5d6a0;--n:#f2a65e;--c:#5f7384;--f:#7cb7ff;--a:#4fd1c5;--p:#b8c4cf}
+@media (pointer:coarse){:root{--fs:16px;--lh:24px}}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.4 var(--sans);overflow:hidden;-webkit-text-size-adjust:100%}
+#root{height:100%}
+button,select{font:inherit;color:inherit}
+button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.app{display:flex;flex-direction:column;height:100%}
+.top{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:7px;font-weight:700;letter-spacing:-.01em;font-size:15px}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel2);padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;min-height:32px}
+.btn:hover{border-color:var(--mut)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.sm{padding:3px 9px;min-height:28px;font-size:12px}
+.btn.ghost{background:transparent}
+.btn.icon{width:32px;padding:0}
+.btn.run{background:var(--acc);border-color:var(--acc);color:var(--accfg);padding:6px 18px}
+.btn.stop{background:transparent;border-color:var(--bad);color:var(--bad)}
+.simctl{display:flex;align-items:center;gap:6px}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 6px;min-height:32px}
+.clock{font:12px var(--mono);color:var(--mut);min-width:62px}
+.seg{display:none;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;font-weight:600;cursor:pointer}
+.seg .on{background:var(--fg);color:var(--bg)}
+.main{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}
+.pane{min-width:0;min-height:0;display:flex;flex-direction:column}
+.code-pane{border-right:1px solid var(--line);background:var(--ed)}
+.pane-h{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.file{font:12px var(--mono);padding:2px 8px;border-radius:4px;background:var(--panel2)}
+.ttl{flex:1;color:var(--mut);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hint{padding:5px 10px;font-size:11.5px;color:var(--mut);border-top:1px solid var(--line);background:var(--panel)}
+.editor{flex:1;min-height:0;display:flex}
+.gutter{width:42px;flex:none;overflow:hidden;background:var(--panel);border-right:1px solid var(--line);color:var(--c);text-align:right;user-select:none}
+.gutter pre,.hl,.input{margin:0;font:var(--fs)/var(--lh) var(--mono);tab-size:2}
+.gutter pre{padding:10px 8px 10px 0}
+.code-wrap{position:relative;flex:1;min-width:0}
+.hl,.input{position:absolute;inset:0;padding:10px 12px;white-space:pre;overflow:auto;border:0;word-wrap:normal}
+.hl{overflow:hidden;pointer-events:none;color:var(--fg)}
+.input{background:transparent;color:transparent;-webkit-text-fill-color:transparent;caret-color:var(--fg);resize:none;outline:none;width:100%;height:100%}
+.input::selection{background:color-mix(in srgb,var(--acc) 35%,transparent);-webkit-text-fill-color:transparent}
+.t-c{color:var(--c);font-style:italic}.t-s{color:var(--s)}.t-n{color:var(--n)}.t-k{color:var(--k)}.t-f{color:var(--f)}.t-a{color:var(--a);font-weight:600}.t-p{color:var(--p)}
+.tabs{display:flex;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--line);scrollbar-width:none}
+.tabs button{border:0;background:transparent;padding:9px 14px;font-weight:600;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs .on{color:var(--fg);border-bottom-color:var(--acc)}
+.view-pane{background:var(--bg)}
+.view{flex:1;min-height:0;display:flex;flex-direction:column}
+.scroll{overflow:auto;flex:1;min-height:0}
+.status{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 10px;border-top:1px solid var(--line);background:var(--panel);font-size:12px}
+.st{font:12px var(--mono);color:var(--mut);margin-right:4px}.st.err{color:var(--bad)}.st.ok{color:var(--ok)}.st.run{color:var(--acc)}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:1px 4px 1px 10px;font:11.5px var(--mono);max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:46vw}
+.chip button{border:0;background:transparent;cursor:pointer;color:var(--mut);font-size:15px;line-height:1;padding:2px 6px}
+.console{padding:8px 0;font:12.5px/1.5 var(--mono)}
+.line{margin:0;padding:1px 12px;white-space:pre-wrap;word-break:break-word;font:inherit}
+.line.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.line.error{color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.empty{padding:22px 16px;color:var(--mut);font-size:13.5px;max-width:46ch}
+.empty b{color:var(--fg)}
+.tbl-wrap{overflow-x:auto;padding:4px 12px}
+table{border-collapse:collapse;font:12px var(--mono)}
+th,td{padding:3px 12px 3px 0;text-align:left;white-space:nowrap}
+th{color:var(--mut);font-weight:500;border-bottom:1px solid var(--line)}
+td.num{text-align:right;padding-right:14px}
+.fleet{display:flex;flex-direction:column;flex:1;min-height:0}
+.fleet-bar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line)}
+.fleet-body{padding:0 10px 10px}
+.host{margin:14px 0 6px;font:600 12px var(--mono);color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.card{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 9px;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0}
+.card.sel{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.card.off{opacity:.55}
+.card-h{display:flex;align-items:center;gap:6px;min-width:0}
+.card-h b{font:600 12.5px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}.dot.restarting{background:var(--warn)}.dot.stopped{background:var(--c)}
+.badge{font:600 10px var(--mono);padding:0 5px;border-radius:3px}
+.badge.spike{background:var(--bad);color:#fff}.badge.leak{background:var(--warn);color:var(--bg)}
+.rs{margin-left:auto;font:11px var(--mono);color:var(--mut)}
+.img{font:11px var(--mono);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{display:flex;align-items:center;gap:6px;font:11px var(--mono);color:var(--mut)}
+.bl{width:24px}.bv{width:30px;text-align:right}
+.track{flex:1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}.track i{display:block;height:100%}
+.spark{width:100%;height:24px;display:block;margin-top:2px}
+.dock{border-top:1px solid var(--line);background:var(--panel);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.dock-t{display:flex;gap:10px;align-items:baseline}.dock-t b{font:600 13px var(--mono)}.dock-t span{color:var(--mut);font-size:12px}
+.dock-b{display:flex;gap:6px;flex-wrap:wrap}
+.charts{padding:10px}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chart{width:100%;height:auto;display:block;background:var(--panel);border:1px solid var(--line);border-radius:6px}
+.grid-l{stroke:var(--line);stroke-width:1}
+.ax{fill:var(--mut);font:10px var(--mono)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.lg{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px 3px 8px;font:11.5px var(--mono);cursor:pointer}
+.lg i{width:9px;height:9px;border-radius:2px}.lg span{color:var(--mut)}.lg.off{opacity:.35}
+.events{padding:6px 0}
+.ev{display:flex;gap:10px;align-items:baseline;padding:4px 12px;font:12px var(--mono);border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.ev time{color:var(--mut)}.ev .tag{min-width:58px;font-weight:600;color:var(--mut)}
+.ev.rule .tag{color:var(--bad)}.ev.emit .tag{color:var(--acc)}.ev.restart .tag{color:var(--a)}.ev.chaos .tag{color:var(--warn)}
+.sinks{padding:6px 12px 14px}.sinks h3{font:600 12px var(--mono);color:var(--mut);margin:14px 0 6px}
+.dump{margin:0;padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font:11.5px/1.5 var(--mono);overflow:auto;max-height:260px}
+.dump.wrap{white-space:pre-wrap;word-break:break-all}
+.scrim{position:absolute;inset:0;background:color-mix(in srgb,var(--bg) 55%,transparent);z-index:5}
+.drawer{position:absolute;z-index:6;top:0;bottom:0;left:0;width:min(400px,100%);background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:4px 0 16px}
+.drawer h4{margin:16px 14px 4px;font-size:13px;color:var(--mut);font-weight:600}
+.pre{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 14px;cursor:pointer;border-left:3px solid transparent}
+.pre:hover{background:var(--panel2)}.pre.on{border-left-color:var(--acc);background:var(--panel2)}
+.pre b{display:block;font-size:14px}.pre span{display:block;font-size:12.5px;color:var(--mut)}
+#boot{position:absolute;inset:0;display:grid;place-items:center;background:var(--bg);color:var(--mut);font:13px var(--mono)}
+@media (max-width:860px){.main{grid-template-columns:minmax(0,1fr)}.hide-m{display:none!important}.seg{display:flex;order:5}.sp{display:none}.top{gap:6px}.simctl{margin-left:auto}.code-pane{border-right:0}.brand span{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.dash{padding:10px}
+.dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.dh h2{margin:0;font-size:18px;letter-spacing:-.01em}.when{font:11.5px var(--mono);color:var(--mut)}.dh .sp{flex:1;display:block}
+.dvar{display:flex;align-items:center;gap:6px;font:12px var(--mono);color:var(--mut)}
+.dsec{margin:14px 0 6px;font-size:13px;color:var(--mut);font-weight:600}
+.drow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.w{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px 10px;min-width:min(100%,200px);display:flex;flex-direction:column;min-height:96px}
+.w.warn{border-color:var(--warn)}.w.crit{border-color:var(--bad)}
+.w-h{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);margin-bottom:6px}.w-h b{font-weight:600;color:var(--fg)}
+.w-b{flex:1;min-height:0;min-width:0}
+.empty.sm{padding:10px 0;font-size:12.5px}
+.werr{color:var(--bad);font:12px var(--mono);white-space:pre-wrap}
+.w-stat .big{font:700 30px/1.1 var(--sans);letter-spacing:-.02em}
+.delta{font:11px var(--mono);margin:2px 0 4px}
+.wspark{width:100%;height:34px;display:block;margin-top:4px}
+.wgauge{width:100%;max-width:190px;display:block;margin:0 auto}
+.gv{font:700 20px var(--sans);fill:var(--fg)}
+.wplot{width:100%;height:auto;display:block}
+.wleg{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font:11px var(--mono);color:var(--mut)}
+.wleg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.wdonut{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.wdonut .dv{font:700 13px var(--mono);fill:var(--fg)}
+.wdonut ul{list-style:none;margin:0;padding:0;flex:1;min-width:110px;font:11.5px var(--mono)}
+.wdonut li{display:flex;align-items:center;gap:6px;padding:1px 0}.wdonut li i{width:8px;height:8px;border-radius:2px}.wdonut li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wdonut li em{font-style:normal;color:var(--mut)}
+.wtbl{overflow-x:auto}.wtbl table{width:100%;font:12px var(--mono)}.wtbl th.r,.wtbl td.r{text-align:right;position:relative;padding-left:10px}
+.wtbl td{padding:3px 0}.wtbl td:first-child{padding-right:10px}.cb{position:absolute;left:10px;top:50%;height:60%;transform:translateY(-50%);opacity:.22;border-radius:2px;max-width:calc(100% - 10px)}.wtbl td.r span{position:relative}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.tile{border:1px solid var(--line);border-radius:6px;padding:6px 8px;display:flex;flex-direction:column;font:11px var(--mono);min-width:0}.tile b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tile span{font-size:14px;color:var(--fg)}
+.trow,.srow{display:flex;align-items:center;gap:8px;font:11.5px var(--mono);padding:2px 0}
+.tn{width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none}.tv{width:64px;text-align:right;flex:none}
+.tt{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}.tt i{display:block;height:100%}.sl{flex:1;min-width:0}
+.wev{font-size:11.5px}.wev .ev{padding:2px 0;border:0}
+.wtext h5{margin:0 0 4px;font-size:14px}.wtext p{margin:3px 0;font-size:13px}.wtext .li{display:flex;gap:8px;font-size:13px;margin:2px 0}.wtext .li i{width:5px;height:5px;border-radius:50%;background:var(--acc);margin-top:7px;flex:none}
+.wkv{margin:0;font:12px var(--mono)}.wkv div{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}.wkv dt{color:var(--mut)}.wkv dd{margin:0}
+code{font:12px var(--mono);background:var(--panel2);padding:1px 5px;border-radius:4px}
+</style></head>
+<body><div id="root"></div><div id="boot">loading sim…</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>/* dockermetrics — composable grammar over a simulated Docker fleet (runs entirely in the browser) */
+(function (G) {
+"use strict";
+const MAXH = 3600, PREFILL = 1800, MB = 1048576;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+let seed = 42;
+const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+const sec = (d) => {
+  if (typeof d === "number") return d;
+  const m = /^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)$/.exec(String(d).trim());
+  if (!m) throw new Error('bad duration "' + d + '" — use e.g. "30s", "5m", "1h"');
+  return parseFloat(m[1]) * ({ ms: .001, s: 1, m: 60, h: 3600, d: 86400 }[m[2]]);
+};
+class Halt extends Error {}
+
+/* ───────────── simulated world ───────────── */
+const SPEC = [
+  ["local","web","nginx:1.25",{tier:"frontend",app:"web",service:"web",env:"dev"},{cpu:.18,mem:90,lim:256,rx:90e3,tx:260e3,pids:24}],
+  ["local","web-1","nginx:1.25",{tier:"frontend",app:"web",service:"web",env:"dev"},{cpu:.22,mem:110,lim:256,rx:110e3,tx:300e3,pids:26}],
+  ["local","web-2","nginx:1.25",{tier:"frontend",app:"web",service:"web",env:"dev"},{cpu:.20,mem:100,lim:256,rx:100e3,tx:280e3,pids:25}],
+  ["local","api-1","node:20",{tier:"backend",app:"api",service:"api",env:"dev"},{cpu:.35,mem:300,lim:512,rx:60e3,tx:120e3,pids:48}],
+  ["local","api-2","node:20",{tier:"backend",app:"api",service:"api",env:"dev"},{cpu:.30,mem:280,lim:512,rx:55e3,tx:110e3,pids:44}],
+  ["local","db","postgres:16",{tier:"backend",app:"db",service:"db",env:"dev"},{cpu:.25,mem:620,lim:1024,rx:40e3,tx:90e3,pids:36}],
+  ["local","cache","redis:7",{tier:"backend",app:"cache",service:"cache",env:"dev"},{cpu:.06,mem:80,lim:256,rx:30e3,tx:30e3,pids:6}],
+  ["local","worker-1","python:3.12",{tier:"backend",app:"worker",service:"worker",env:"dev"},{cpu:.45,mem:210,lim:512,rx:8e3,tx:6e3,pids:18}],
+  ["local","worker-2","python:3.12",{tier:"backend",app:"worker",service:"worker",env:"dev"},{cpu:.40,mem:210,lim:512,rx:8e3,tx:6e3,pids:18}],
+  ["local","worker-3","python:3.12",{tier:"backend",app:"worker",service:"worker",env:"dev"},{cpu:.50,mem:240,lim:512,rx:9e3,tx:7e3,pids:20}],
+  ["prod-1","checkout-1","node:20",{tier:"backend",app:"checkout",service:"checkout",env:"prod"},{cpu:.42,mem:340,lim:512,rx:80e3,tx:150e3,pids:52}],
+  ["prod-1","checkout-2","node:20",{tier:"backend",app:"checkout",service:"checkout",env:"prod"},{cpu:.40,mem:330,lim:512,rx:78e3,tx:146e3,pids:50}],
+  ["prod-1","search-1","elasticsearch:8",{tier:"backend",app:"search",service:"search",env:"prod"},{cpu:.38,mem:1400,lim:2048,rx:50e3,tx:210e3,pids:90}],
+  ["prod-1","auth-1","golang:1.22",{tier:"backend",app:"auth",service:"auth",env:"prod"},{cpu:.12,mem:70,lim:256,rx:25e3,tx:40e3,pids:14}],
+  ["prod-2","checkout-3","node:20",{tier:"backend",app:"checkout",service:"checkout",env:"prod"},{cpu:.44,mem:350,lim:512,rx:82e3,tx:155e3,pids:53}],
+  ["prod-2","search-2","elasticsearch:8",{tier:"backend",app:"search",service:"search",env:"prod"},{cpu:.36,mem:1350,lim:2048,rx:48e3,tx:200e3,pids:88}],
+  ["prod-2","auth-2","golang:1.22",{tier:"backend",app:"auth",service:"auth",env:"prod"},{cpu:.14,mem:72,lim:256,rx:26e3,tx:42e3,pids:15}],
+  ["prod-3","checkout-4","node:20",{tier:"backend",app:"checkout",service:"checkout",env:"prod"},{cpu:.41,mem:335,lim:512,rx:79e3,tx:148e3,pids:51}],
+  ["prod-3","cache-p3","redis:7",{tier:"backend",app:"cache",service:"cache",env:"prod"},{cpu:.08,mem:120,lim:512,rx:60e3,tx:60e3,pids:7}],
+  ["prod-3","pg-p3","postgres:16",{tier:"backend",app:"db",service:"db",env:"prod"},{cpu:.28,mem:800,lim:1024,rx:44e3,tx:96e3,pids:38}],
+];
+
+class Sim {
+  constructor([host, name, image, labels, b]) {
+    this.host = host; this.name = name; this.image = image; this.labels = labels;
+    this.b = { cpu: b.cpu, mem: b.mem * MB, rx: b.rx, tx: b.tx, pids: b.pids };
+    this.limit = b.lim * MB; this.pidsLimit = 512; this.phase = rnd() * 6.28;
+    this.reset();
+  }
+  reset() {
+    this.mode = "normal"; this.state = "running"; this.left = 0; this.leak = 0; this.noise = 0;
+    this.cpu = this.b.cpu; this.mem = this.b.mem; this.pids = this.b.pids; this.restarts = 0;
+    this.rx = rnd() * 1e8; this.tx = rnd() * 1e8; this.ior = rnd() * 1e8; this.iow = rnd() * 1e8; this.hist = [];
+  }
+  step(t) {
+    const w = 1 + .3 * Math.sin(t / 240 + this.phase);
+    if (this.state === "restarting") {
+      this.cpu = .02 + rnd() * .03;
+      if (--this.left <= 0) { this.state = "running"; this.leak = 0; this.mode = "normal"; this.mem = this.b.mem * .55; }
+    } else if (this.state === "stopped") { this.cpu = 0; this.mem = 0; }
+    else {
+      this.noise = this.noise * .85 + (rnd() - .5) * .25;
+      let target = this.b.cpu * w * (1 + this.noise);
+      if (this.mode === "spike") target = .92 + rnd() * .07;
+      this.cpu = clamp(this.cpu * .5 + target * .5, .005, 1);
+      if (this.mode === "leak") this.leak = Math.min(this.leak + this.limit * .002, this.limit * .96 - this.b.mem);
+      const mt = this.b.mem * (.96 + .04 * Math.sin(t / 300 + this.phase)) + this.leak;
+      this.mem = clamp(this.mem * .8 + mt * .2, 0, this.limit * .985);
+    }
+    const up = this.state === "running" ? 1 : 0;
+    this.rx += up * this.cpu * this.b.rx * (.6 + rnd() * .8);
+    this.tx += up * this.cpu * this.b.tx * (.6 + rnd() * .8);
+    this.ior += up * (2e3 + this.cpu * 15e3 * rnd());
+    this.iow += up * (4e3 + this.cpu * 40e3 * (.3 + rnd()));
+    this.pids = up ? Math.round(this.b.pids * (.9 + this.cpu * .5) + (this.mode === "spike" ? 40 : 0)) : 0;
+    this.hist.push({ t, cpu: this.cpu, mem: this.mem, rx: this.rx, tx: this.tx, ior: this.ior, iow: this.iow, pids: this.pids });
+    if (this.hist.length > MAXH + 300) this.hist.splice(0, 300);
+  }
+}
+const world = {
+  t: 0, sims: [], events: [], board: null, sinks: { prom: {}, statsd: {}, files: {} },
+  reset() {
+    seed = 42; this.sims = SPEC.map(s => new Sim(s)); this.t = Math.floor(Date.now() / 1000) - PREFILL;
+    for (let i = 0; i < PREFILL; i++) this.step();
+    this.events = [];
+  },
+  step() { this.t++; for (const s of this.sims) s.step(this.t); },
+  log(type, msg) { this.events.push({ t: this.t, type, msg }); if (this.events.length > 400) this.events.shift(); },
+  clearSinks() { this.sinks = { prom: {}, statsd: {}, files: {} }; },
+};
+const engine = {
+  items: new Set(), onError() {},
+  add(i) { this.items.add(i); return i; }, remove(i) { this.items.delete(i); },
+  async tick() { for (const i of [...this.items]) { try { if (i.tick) await i.tick(); } catch (e) { if (!(e instanceof Halt)) this.onError(e); } } },
+  stopAll() { for (const i of [...this.items]) { try { i.stop && i.stop(); } catch (e) {} } this.items.clear(); },
+};
+
+/* ───────────── ops ───────────── */
+const mkop = (kind, name, fn, extra) => Object.assign({ __op: true, kind, name, fn }, extra);
+const mapop = (name, fn) => mkop("map", name, fn);
+const pct = mapop("pct", v => v * 100), kb = mapop("kb", v => v / 1e3), mb = mapop("mb", v => v / 1e6), gb = mapop("gb", v => v / 1e9);
+const round = (n = 0) => mapop("round", v => +v.toFixed(n));
+const of = (x) => mapop("of", (v, sim) => v / (x === "limit" ? (sim ? sim.limit : 1) : x));
+const rate = (w = "1s") => mkop("rate", "rate", null, { per: sec(w) });
+const red = (name, fn) => mkop("reduce", name, fn);
+const nums = a => a.filter(x => typeof x === "number" && isFinite(x));
+const pq = q => a => { a = nums(a); if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); return s[clamp(Math.ceil(q * s.length) - 1, 0, s.length - 1)]; };
+const AVG = red("avg", a => { a = nums(a); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; });
+const avg = AVG, sum = red("sum", a => { a = nums(a); return a.length ? a.reduce((x, y) => x + y, 0) : null; });
+const min = red("min", a => { a = nums(a); return a.length ? Math.min(...a) : null; });
+const max = red("max", a => { a = nums(a); return a.length ? Math.max(...a) : null; });
+const p50 = red("p50", pq(.5)), p95 = red("p95", pq(.95)), p99 = red("p99", pq(.99));
+const count = red("count", a => a.length);
+
+function applyOp(o, s, sim) {
+  if (o.kind === "map") return s.map(p => ({ t: p.t, v: o.fn(p.v, sim) }));
+  if (o.kind === "rate") { const out = []; for (let i = 1; i < s.length; i++) out.push({ t: s[i].t, v: (s[i].v - s[i - 1].v) / (s[i].t - s[i - 1].t || 1) * o.per }); return out; }
+  return s;
+}
+
+/* ───────────── metrics ───────────── */
+class Metric {
+  constructor(name, src, ops) { this.name = name; this.src = src; this.ops = ops || []; }
+  get pre() { const i = this.ops.findIndex(o => o.kind === "reduce"); return i < 0 ? this.ops : this.ops.slice(0, i); }
+  get reducer() { return this.ops.find(o => o.kind === "reduce"); }
+  get post() { const i = this.ops.findIndex(o => o.kind === "reduce"); return i < 0 ? [] : this.ops.slice(i + 1); }
+  pipe(...args) {
+    const ops = this.ops.slice();
+    for (const a of args) {
+      if (a && a.__op) ops.push(a);
+      else if (a && typeof a === "object" && "window" in a) {
+        const i = ops.map(o => o.kind).lastIndexOf("reduce");
+        if (i < 0) throw new Error("{ window } must follow a reducer such as avg or p95");
+        ops[i] = Object.assign({}, ops[i], { window: sec(a.window) });
+      } else throw new TypeError("pipe(): expected an op like mb, pct, of(...), rate(...), avg, p95 or { window }");
+    }
+    if (ops.filter(o => o.kind === "reduce").length > 1) throw new Error("pipe(): only one reducer (avg, sum, max, …) per metric");
+    return new Metric(this.name, this.src, ops);
+  }
+  is(cmp) {
+    const m = this;
+    if (!cmp || !cmp.__cmp) throw new TypeError("is(): expected a comparator like gt(0.9)");
+    return new Pred(async (ctx, n) => {
+      if (m.reducer) { let v = await valueOf(m, ctx); if (v != null) for (const o of m.post) v = o.fn(v, null); return [{ t: world.t, v: cmp.fn(v) }]; }
+      const s = await seriesOf(m, ctx, n);
+      return s.slice(-n).map(p => ({ t: p.t, v: cmp.fn(p.v) }));
+    }, 2, m);
+  }
+  toJSON() { return "metric:" + this.name; }
+}
+const base = (name, get) => new Metric(name, { kind: "base", get });
+const cpu = base("cpu", s => s.cpu);
+const mem = base("mem", s => s.mem); mem.limit = base("mem.limit", (s, sim) => sim.limit);
+const net = base("net", s => ({ rx: s.rx, tx: s.tx })); net.rx = base("net.rx", s => s.rx); net.tx = base("net.tx", s => s.tx);
+const io = base("io", s => ({ r: s.ior, w: s.iow })); io.r = base("io.r", s => s.ior); io.w = base("io.w", s => s.iow);
+const pids = base("pids", (s, sim) => ({ current: s.pids, limit: sim.pidsLimit })); pids.current = base("pids.current", s => s.pids);
+const metric = (name, fn) => new Metric(name, { kind: "custom", fn });
+const lift = (nm, f) => (a, b) => new Metric(nm + "(" + (a && a.name || a) + "," + (b && b.name || b) + ")", { kind: "combine", a, b, f });
+const add = lift("add", (x, y) => x + y), sub = lift("sub", (x, y) => x - y), mul = lift("mul", (x, y) => x * y), div = lift("div", (x, y) => y ? x / y : 0);
+
+async function baseSeries(m, ctx, n) {
+  const src = m.src;
+  if (src.kind === "base") { const h = ctx.sim.hist; return h.slice(Math.max(0, h.length - n - 1)).map(x => ({ t: x.t, v: src.get(x, ctx.sim) })); }
+  if (src.kind === "custom") return [{ t: world.t, v: await src.fn(new Container(ctx.dockers, ctx.sim.name, ctx.sim.host)) }];
+  const [a, b] = await Promise.all([src.a, src.b].map(o => o instanceof Metric ? seriesOf(o, ctx, n) : null));
+  if (!a && !b) return [{ t: world.t, v: src.f(src.a, src.b) }];
+  const L = Math.min(a ? a.length : Infinity, b ? b.length : Infinity), ref = a || b, out = [];
+  for (let i = 0; i < L; i++) out.push({ t: ref[ref.length - L + i].t, v: src.f(a ? a[a.length - L + i].v : src.a, b ? b[b.length - L + i].v : src.b) });
+  return out;
+}
+async function seriesOf(m, ctx, n) {
+  const s = await baseSeries(m, ctx, n);
+  return m.pre.reduce((acc, o) => applyOp(o, acc, ctx.sim), s);
+}
+async function valueOf(m, ctx) {
+  const r = m.reducer;
+  if (r && r.window) { const s = await seriesOf(m, ctx, r.window); return r.fn(s.map(p => p.v)); }
+  const s = await seriesOf(m, ctx, 2);
+  return s.length ? s[s.length - 1].v : undefined;
+}
+function finish(m, vals, r) {
+  r = r || m.reducer; let v = r.fn(nums(vals));
+  if (v != null) for (const o of m.post) v = o.fn(v, null);
+  return v;
+}
+
+/* ───────────── predicates ───────────── */
+class Pred {
+  constructor(fn, need, metric) { this.fn = fn; this.need = need || 2; this.metric = metric || null; }
+  series(ctx, n) { return this.fn(ctx, n); }
+  async eval(ctx) { const s = await this.fn(ctx, this.need); return s.length ? !!s[s.length - 1].v : false; }
+  and(...p) { return and(this, ...p); } or(...p) { return or(this, ...p); } not() { return not(this); }
+  sustained(d) { return sustained(this, d); }
+  toJSON() { return "predicate"; }
+}
+const cmpf = (label, f) => (...a) => ({ __cmp: true, label, fn: v => typeof v === "number" && f(v, ...a) });
+const gt = cmpf("gt", (v, x) => v > x), gte = cmpf("gte", (v, x) => v >= x), lt = cmpf("lt", (v, x) => v < x),
+  lte = cmpf("lte", (v, x) => v <= x), eq = cmpf("eq", (v, x) => v === x), between = cmpf("between", (v, a, b) => v >= a && v <= b);
+const zip = async (preds, ctx, n, f) => {
+  const ss = await Promise.all(preds.map(p => p.series(ctx, n)));
+  const L = Math.min(...ss.map(s => s.length)), out = [];
+  for (let i = 0; i < L; i++) out.push({ t: ss[0][ss[0].length - L + i].t, v: f(ss.map(s => s[s.length - L + i].v)) });
+  return out;
+};
+const and = (...p) => new Pred((c, n) => zip(p, c, n, v => v.every(Boolean)), Math.max(...p.map(x => x.need)), p[0].metric);
+const or = (...p) => new Pred((c, n) => zip(p, c, n, v => v.some(Boolean)), Math.max(...p.map(x => x.need)), p[0].metric);
+const not = (p) => new Pred((c, n) => zip([p], c, n, v => !v[0]), p.need, p.metric);
+const sustained = (p, dur) => {
+  const d = Math.round(sec(dur));
+  return new Pred(async (ctx) => {
+    const s = await p.series(ctx, d);
+    if (s.length <= 1) return s;
+    const w = s.slice(-d);
+    return [{ t: w[w.length - 1].t, v: w.length >= d * .98 && w.every(x => x.v) }];
+  }, 2, p.metric);
+};
+
+/* ───────────── selection ───────────── */
+const glob = p => new RegExp("^" + p.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
+function matcher(sel, any) {
+  const live = s => any || s.state !== "stopped";
+  if (sel == null) return live;
+  if (typeof sel === "string") { const r = glob(sel); return s => r.test(s.name); }
+  if (sel instanceof RegExp) return s => sel.test(s.name);
+  if (typeof sel === "function") return sel;
+  const t = [];
+  if (sel.name) { const r = glob(sel.name); t.push(s => r.test(s.name)); }
+  if (sel.label) [].concat(sel.label).forEach(l => { const [k, v] = l.split("="); t.push(s => k in s.labels && (v === undefined || s.labels[k] === v)); });
+  if (sel.image) t.push(s => sel.image instanceof RegExp ? sel.image.test(s.image) : s.image.startsWith(sel.image));
+  if (sel.host) t.push(s => s.host === sel.host);
+  if (sel.state) t.push(s => s.state === sel.state); else t.push(live);
+  return s => t.every(f => f(s));
+}
+const describeSel = sel => sel == null ? "all running" : typeof sel === "string" || sel instanceof RegExp ? String(sel) : typeof sel === "function" ? "custom" :
+  Object.entries(sel).map(([k, v]) => k + "=" + v).join(" ");
+const keyOf = (s, k) => k === "name" ? s.name : k === "image" ? s.image : k === "host" ? s.host : k === "state" ? s.state :
+  k.startsWith("label:") ? (s.labels[k.slice(6)] ?? "(none)") : (() => { throw new Error('by(): unknown key "' + k + '" — use name, image, host, state or label:<key>'); })();
+function tree(sims, bys, leaf) {
+  if (!bys.length) return leaf(sims);
+  const g = new Map();
+  for (const s of sims) { const k = keyOf(s, bys[0].key); if (!g.has(k)) g.set(k, []); g.get(k).push(s); }
+  const o = {}; for (const k of [...g.keys()].sort()) o[k] = tree(g.get(k), bys.slice(1), leaf); return o;
+}
+const by = key => ({ __by: true, key });
+const last = d => ({ __win: true, from: () => world.t - sec(d) });
+const since = date => ({ __win: true, from: () => Math.floor(Date.parse(date) / 1000) });
+const bucket = (size, r) => ({ __bucket: true, size: sec(size), red: r || AVG });
+function bucketize(ser, size, r) {
+  const m = new Map();
+  for (const p of ser) { const k = Math.floor(p.t / size) * size; if (!m.has(k)) m.set(k, []); m.get(k).push(p.v); }
+  return [...m].sort((a, b) => a[0] - b[0]).map(([t, vs]) => ({ t, v: r.fn(vs) }));
+}
+const timeStr = t => new Date(t * 1000).toTimeString().slice(0, 8);
+
+class Report {
+  constructor(data, dims) { this.data = data; this.dims = dims; }
+  toJSON() { return this.data; }
+  flatten() {
+    const rows = [], walk = (v, path) => {
+      if (Array.isArray(v)) for (const p of v) { const r = {}; path.forEach((k, i) => r[this.dims[i] || "k" + i] = k); r.t = timeStr(p.t); r.v = p.v == null ? null : +p.v.toFixed(3); rows.push(r); }
+      else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, path.concat(k));
+    };
+    walk(this.data, []); return rows;
+  }
+}
+
+/* ───────────── groups & containers ───────────── */
+class Group {
+  constructor(dockers, sel) { this.dockers = dockers; this.sel = sel; this.test = matcher(sel); this.single = false; }
+  get docker() { return this.dockers[0]; }
+  sims() { const h = new Set(this.dockers.map(d => d.host)); return world.sims.filter(s => h.has(s.host) && this.test(s)); }
+  names() { return this.sims().map(s => s.name); }
+  get size() { return this.sims().length; }
+  label() { return describeSel(this.sel) + (this.dockers.length === 1 ? " @" + this.docker.host : " @fleet"); }
+  on(e, f) { this.dockers.forEach(d => d.on(e, f)); return this; }
+  async _one(item, sims, bys, single) {
+    const ctxs = sims.map(s => ({ sim: s, dockers: this.dockers })), vals = new Map();
+    if (item instanceof Pred) {
+      for (const c of ctxs) vals.set(c.sim, await item.eval(c));
+      if (single) return vals.get(sims[0]);
+      if (bys.length) return tree(sims, bys, l => l.filter(s => vals.get(s)).length);
+      return Object.fromEntries(sims.map(s => [s.name, vals.get(s)]));
+    }
+    if (!(item instanceof Metric)) throw new TypeError("read(): expected a metric, a predicate, or { name: metric }");
+    for (const c of ctxs) vals.set(c.sim, await valueOf(item, c));
+    const r = item.reducer;
+    if (single) { const v = vals.get(sims[0]); return r ? finish(item, [v]) : v; }
+    if (bys.length) return tree(sims, bys, l => finish(item, l.map(s => vals.get(s)), r || AVG));
+    if (r) return finish(item, sims.map(s => vals.get(s)));
+    return Object.fromEntries(sims.map(s => [s.name, vals.get(s)]));
+  }
+  async read(spec, ...mods) {
+    const bys = mods.filter(m => m && m.__by), sims = this.sims();
+    if (this.single && !sims.length) throw new Error("No such container: " + this.name);
+    if (spec instanceof Metric || spec instanceof Pred) return this._one(spec, sims, bys, this.single);
+    if (spec && typeof spec === "object") { const o = {}; for (const [k, v] of Object.entries(spec)) o[k] = await this._one(v, sims, bys, this.single); return o; }
+    throw new TypeError("read(): expected a metric or { name: metric }");
+  }
+  async check(pred) { const r = await this.read(pred); return this.single ? !!r : Object.values(r).some(Boolean); }
+  async history(spec, ...mods) {
+    const win = mods.find(m => m && m.__win), bk = mods.find(m => m && m.__bucket), bys = mods.filter(m => m && m.__by);
+    const from = win ? win.from() : world.t - MAXH, n = Math.min(MAXH, Math.max(2, Math.ceil(world.t - from) + 1)), sims = this.sims();
+    if (this.single && !sims.length) throw new Error("No such container: " + this.name);
+    const one = async (m) => {
+      if (!(m instanceof Metric)) throw new TypeError("history(): expected a metric or { name: metric }");
+      const per = new Map();
+      for (const s of sims) {
+        let ser = (await seriesOf(m, { sim: s, dockers: this.dockers }, n)).filter(p => p.t >= from);
+        if (bk) ser = bucketize(ser, bk.size, bk.red); per.set(s, ser);
+      }
+      const r = m.reducer;
+      const comb = l => { const acc = new Map(); for (const s of l) for (const p of per.get(s)) { if (!acc.has(p.t)) acc.set(p.t, []); acc.get(p.t).push(p.v); }
+        return [...acc].sort((a, b) => a[0] - b[0]).map(([t, vs]) => ({ t, v: finish(m, vs, r || AVG) })); };
+      if (this.single) return r ? comb(sims) : per.get(sims[0]);
+      if (bys.length || r) return tree(sims, bys, comb);
+      return Object.fromEntries(sims.map(s => [s.name, per.get(s)]));
+    };
+    let data, dims = [];
+    if (spec instanceof Metric) data = await one(spec);
+    else if (spec && typeof spec === "object") { data = {}; for (const [k, v] of Object.entries(spec)) data[k] = await one(v); dims.push("metric"); }
+    else throw new TypeError("history(): expected a metric or { name: metric }");
+    if (this.single) return data;
+    dims.push(...(bys.length ? bys.map(b => b.key) : ["container"]));
+    return new Report(data, dims);
+  }
+  stream(spec, opts, ...mods) { if (opts && opts.__by) { mods.unshift(opts); opts = {}; } return new Stream(this, spec, opts || {}, mods); }
+  watch(...rules) { return new Watcher(this, rules.flat()).start(); }
+  restart(o) { o = o || {}; for (const s of this.sims()) { s.state = "restarting"; s.left = 4 + Math.min(20, Math.round(sec(o.grace || 0))); s.restarts++; s.mode = "normal"; s.leak = 0; world.log("restart", "restart · " + s.name + (o.grace ? " (grace " + o.grace + ")" : "")); } return this; }
+  stop() { for (const s of this.sims()) { s.state = "stopped"; s.mem = 0; world.log("stop", "stopped · " + s.name); } return this; }
+  start() { const t = matcher(this.sel, true), h = new Set(this.dockers.map(d => d.host));
+    for (const s of world.sims) if (h.has(s.host) && t(s) && s.state === "stopped") { s.state = "restarting"; s.left = 3; world.log("start", "started · " + s.name); } return this; }
+  toJSON() { return { selector: describeSel(this.sel), containers: this.names() }; }
+}
+class Container extends Group {
+  constructor(dockers, name, host) { super(dockers, s => s.name === name && (!host || s.host === host)); this.name = name; this.single = true; this.host = host; }
+  sims() { return world.sims.filter(s => s.name === this.name && (!this.host || s.host === this.host) && this.dockers.some(d => d.host === s.host)); }
+  label() { return this.name; }
+  inspect() { const s = this.sims()[0]; return s && { name: s.name, image: s.image, host: s.host, state: s.state, restarts: s.restarts, labels: s.labels }; }
+  toJSON() { return this.inspect() || { name: this.name, missing: true }; }
+}
+
+/* ───────────── rules & watchers ───────────── */
+class Rule {
+  constructor(n) { this.name = n; this.pred = null; this.actions = []; this.cd = 0; }
+  when(p) { if (!(p instanceof Pred)) throw new TypeError("when(): expected a predicate such as cpu.is(gt(0.9))"); this.pred = p; return this; }
+  then(...a) { this.actions.push(...a); return this; }
+  cooldown(d) { this.cd = sec(d); return this; }
+}
+const rule = n => new Rule(n);
+const emit = name => { const f = async (c, e, d) => d.emit(name, e); f.label = "emit(" + name + ")"; return f; };
+class Watcher {
+  constructor(group, rules) { this.group = group; this.rules = rules; this.cool = new Map(); this.item = null;
+    for (const r of rules) if (!r.pred) throw new Error('rule "' + r.name + '" has no .when(...)'); }
+  start() { if (this.item) return this;
+    this.item = engine.add({ label: "watch " + this.rules.map(r => r.name).join(", ") + " → " + this.group.label(), tick: () => this.tick(), stop: () => this.stop() }); return this; }
+  stop() { if (this.item) { engine.remove(this.item); this.item = null; } return this; }
+  on(e, f) { this.group.on(e, f); return this; }
+  async tick() {
+    for (const sim of this.group.sims()) {
+      if (sim.state === "stopped") continue;
+      const ctx = { sim, dockers: this.group.dockers };
+      for (const r of this.rules) {
+        const key = r.name + "|" + sim.name;
+        if ((this.cool.get(key) || 0) > world.t) continue;
+        if (!(await r.pred.eval(ctx))) continue;
+        if (r.cd) this.cool.set(key, world.t + r.cd);
+        const handle = new Container(this.group.dockers, sim.name, sim.host);
+        const value = r.pred.metric ? await valueOf(r.pred.metric, ctx) : true;
+        const evt = { rule: r.name, container: handle, value, at: world.t };
+        world.log("rule", r.name + " fired · " + sim.name);
+        for (const a of r.actions) { try { await a(handle, evt, this.group.docker); } catch (e) { engine.onError(e); } }
+      }
+    }
+  }
+}
+
+/* ───────────── streams & sinks ───────────── */
+class Stream {
+  constructor(group, spec, opts, mods) {
+    this.group = group; this.spec = spec; this.every = sec(opts.every || "5s"); this.mods = mods;
+    this.sinks = []; this.rules = []; this.limit = Infinity; this.count = 0; this.lastT = -1e9;
+    this.q = []; this.waiters = []; this.started = false; this.done = false; this.iter = false; this.item = null; this.watcher = null;
+    this.single = spec instanceof Metric || spec instanceof Pred;
+    this.flat = spec instanceof Metric && !spec.reducer && !group.single && !mods.some(m => m && m.__by);
+    setTimeout(() => { if (!this.iter && !this.started) this.start(); }, 0);
+  }
+  to(s) { if (!s || !s.write) throw new TypeError("to(): expected a sink such as prometheus(), file() or tap()"); this.sinks.push(s); return this; }
+  take(n) { this.limit = n; return this; }
+  watch(...r) { this.rules.push(...r.flat()); if (this.started) this._watch(); return this; }
+  on(e, f) { this.group.on(e, f); return this; }
+  _watch() { if (this.rules.length && !this.watcher) this.watcher = new Watcher(this.group, this.rules).start(); }
+  start() {
+    if (this.started) return this; this.started = true;
+    const names = this.single ? this.spec.name : Object.keys(this.spec).join(",");
+    this.item = engine.add({ label: "stream " + names + " every " + this.every + "s · " + this.group.label(), tick: () => this.tick(), stop: () => this.stop() });
+    this._watch(); return this;
+  }
+  async tick() {
+    if (this.done || world.t - this.lastT < this.every) return;
+    this.lastT = world.t;
+    const v = await this.group.read(this.spec, ...this.mods);
+    const data = this.single ? { [this.spec.name]: v } : v;
+    const frame = { t: world.t, data, value: v };
+    if (this.group.single) frame.container = this.group.name;
+    for (const s of this.sinks) { try { s.write(frame, this); } catch (e) { engine.onError(e); } }
+    if (this.flat) for (const [c, x] of Object.entries(v)) this._push({ t: frame.t, container: c, value: x });
+    else this._push(frame);
+    if (++this.count >= this.limit) this.stop();
+  }
+  _push(x) { const w = this.waiters.shift(); if (w) w({ value: x, done: false }); else this.q.push(x); }
+  stop() {
+    if (this.done) return this; this.done = true;
+    if (this.item) engine.remove(this.item); if (this.watcher) this.watcher.stop();
+    while (this.waiters.length) this.waiters.shift()({ value: undefined, done: true });
+    return this;
+  }
+  [Symbol.asyncIterator]() {
+    this.iter = true; this.start(); const me = this;
+    return {
+      next() { if (me.q.length) return Promise.resolve({ value: me.q.shift(), done: false });
+        if (me.done) return Promise.resolve({ value: undefined, done: true });
+        return new Promise(r => me.waiters.push(r)); },
+      return() { me.stop(); return Promise.resolve({ value: undefined, done: true }); },
+    };
+  }
+}
+const STRUCT = new Set(["rx", "tx", "r", "w", "current", "limit"]);
+function flatten(data) {
+  const out = [], cn = new Set(world.sims.map(s => s.name));
+  const walk = (v, name, labels) => {
+    if (typeof v === "number") { if (isFinite(v)) out.push({ name, labels, v }); }
+    else if (typeof v === "boolean") out.push({ name, labels, v: +v });
+    else if (v && typeof v === "object" && !Array.isArray(v)) for (const [k, x] of Object.entries(v)) {
+      if (STRUCT.has(k)) walk(x, name + "_" + k, labels);
+      else { const ln = cn.has(k) ? "container" : "group" + (Object.keys(labels).filter(l => l.startsWith("group")).length || ""); walk(x, name, Object.assign({}, labels, { [ln]: k })); }
+    }
+  };
+  for (const [k, v] of Object.entries(data)) walk(v, k.replace(/[^\w]/g, "_"), {});
+  return out;
+}
+const num = v => String(+v.toPrecision(6));
+const tap = fn => ({ write: f => fn(f) });
+const json = { fmt: f => JSON.stringify(Object.assign({ t: f.t }, f.data)) };
+const prometheus = (o = {}) => ({ write: f => {
+  const px = o.prefix || "", by = new Map();
+  for (const r of flatten(f.data)) { const n = px + r.name; if (!by.has(n)) by.set(n, []);
+    by.get(n).push(n + (Object.keys(r.labels).length ? "{" + Object.entries(r.labels).map(([k, v]) => k + '="' + v + '"').join(",") + "}" : "") + " " + num(r.v)); }
+  let text = ""; for (const [n, ls] of by) text += "# TYPE " + n + " gauge\n" + ls.join("\n") + "\n";
+  world.sinks.prom[o.port || 9100] = { text, t: f.t };
+} });
+const statsd = (url, o = {}) => ({ write: f => {
+  const a = world.sinks.statsd[url] || (world.sinks.statsd[url] = []);
+  for (const r of flatten(f.data)) a.push((o.prefix || "") + [r.name].concat(Object.values(r.labels)).join(".") + ":" + num(r.v) + "|g");
+  if (a.length > 120) a.splice(0, a.length - 120);
+} });
+const file = (path, fmt) => ({ write: f => {
+  const a = world.sinks.files[path] || (world.sinks.files[path] = []); a.push((fmt || json).fmt(f)); if (a.length > 80) a.shift();
+} });
+
+/* ───────────── docker, fleet ───────────── */
+function parseHost(h) {
+  if (!h) return "local";
+  const s = String(h).replace(/^[a-z+]+:\/\//i, "").replace(/^.*@/, "").replace(/[:/].*$/, "");
+  return !s || s === "localhost" || s === "127.0.0.1" ? "local" : s;
+}
+class Docker {
+  constructor(o) { o = o || {}; this.host = parseHost(o.host); this.uri = o.host || "unix:///var/run/docker.sock"; this.L = {}; }
+  container(n) { return new Container([this], n, this.host); }
+  containers(sel) { return new Group([this], sel); }
+  on(e, f) { (this.L[e] = this.L[e] || []).push(f); return this; }
+  emit(e, p) {
+    world.log("emit", e + (p && p.rule ? " ← " + p.rule + " · " + (p.container && p.container.name) : ""));
+    for (const f of [...(this.L[e] || []), ...(this.L["*"] || [])]) { try { f(p, e); } catch (err) { engine.onError(err); } }
+  }
+}
+const docker = o => new Docker(o);
+const fleet = ds => ({ dockers: ds, containers: sel => new Group(ds, sel), container: n => new Container(ds, n), on(e, f) { ds.forEach(d => d.on(e, f)); return this; } });
+
+/* ───────────── helpers for playing with the sim ───────────── */
+const chaos = (() => {
+  const pick = sel => world.sims.filter(matcher(sel, true));
+  const set = (label, f) => (sel, ...a) => { const l = pick(sel); l.forEach(s => f(s, ...a)); world.log("chaos", label + " · " + (l.map(s => s.name).join(", ") || "(none)")); return l.length; };
+  return {
+    spike: set("cpu spike", s => { if (s.state === "running") s.mode = "spike"; }),
+    leak: set("memory leak", s => { if (s.state === "running") s.mode = "leak"; }),
+    heal: set("heal", s => { s.mode = "normal"; s.leak = 0; if (s.state === "stopped") { s.state = "restarting"; s.left = 3; } }),
+    kill: set("kill", s => { s.state = "stopped"; s.mem = 0; }),
+  };
+})();
+function sleep(d) {
+  const until = world.t + sec(d);
+  return new Promise((res, rej) => { const item = { hidden: true, label: "sleep", tick() { if (world.t >= until) { engine.remove(item); res(); } }, stop() { rej(new Halt()); } }; engine.add(item); });
+}
+const spark = vals => { vals = nums(vals); if (!vals.length) return ""; const lo = Math.min(...vals), hi = Math.max(...vals), ch = "▁▂▃▄▅▆▇█";
+  return vals.map(v => ch[hi === lo ? 0 : Math.round((v - lo) / (hi - lo) * 7)]).join(""); };
+
+
+/* ───────────── dashboards DSL ───────────── */
+const maxOf = lift("maxOf", (x, y) => Math.max(x, y)), minOf = lift("minOf", (x, y) => Math.min(x, y));
+const rawOf = h => h instanceof Report ? h.data : h;
+const leaves = (d, p) => { p = p || []; if (Array.isArray(d)) return [{ name: p.join("/"), pts: d }];
+  if (d && typeof d === "object") return Object.entries(d).flatMap(([k, v]) => leaves(v, p.concat(k))); return []; };
+const flatVals = (d, p) => { p = p || [];
+  if (typeof d === "number") return isFinite(d) ? [[p.join("/"), d]] : [];
+  if (typeof d === "boolean") return [[p.join("/"), +d]];
+  if (d && typeof d === "object") return Object.entries(d).flatMap(([k, v]) => flatVals(v, p.concat(k))); return []; };
+const avgPts = ls => { const acc = new Map();
+  for (const l of ls) for (const p of l.pts) { if (p.v == null) continue; if (!acc.has(p.t)) acc.set(p.t, []); acc.get(p.t).push(p.v); }
+  return [...acc].sort((a, b) => a[0] - b[0]).map(([t, vs]) => ({ t, v: vs.reduce((x, y) => x + y, 0) / vs.length })); };
+const stateOf = (v, o) => v == null || !o ? "ok" : o.crit && o.crit.fn(v) ? "crit" : o.warn && o.warn.fn(v) ? "warn" : "ok";
+const isOpts = x => x && typeof x === "object" && !x.__by && !x.__win && !x.__bucket && !(x instanceof Metric) && !(x instanceof Group) && !(x instanceof Pred);
+const DEFSPAN = { stat: 3, gauge: 3, line: 6, area: 6, bar: 6, donut: 4, table: 8, heatmap: 8, grid: 6, top: 4, histogram: 4, sparks: 6, events: 6, text: 4, kv: 4 };
+function wmods(w, ctx, n, noBy) {
+  const m = w.mods.filter(x => !(noBy && x.__by));
+  if (!m.some(x => x.__win)) m.push(last(ctx.range));
+  if (n && !m.some(x => x.__bucket)) m.push(bucket(Math.max(1, Math.round(ctx.range / n))));
+  return m;
+}
+async function entriesOf(g, m, w) {
+  if (!(m instanceof Metric)) throw new TypeError(w.type + "(): expected a metric");
+  const bys = w.mods.filter(x => x.__by), mods = m.reducer && !bys.length ? [by("name")] : bys;
+  const r = await g.read(m, ...mods);
+  return g.single && typeof r === "number" ? [[g.name, r]] : flatVals(r);
+}
+async function scalarOf(g, m, w) {
+  if (!(m instanceof Metric)) throw new TypeError(w.type + "(): expected a single metric");
+  const r = await g.read(m);
+  if (typeof r === "number") return r;
+  if (r && typeof r === "object") { const v = nums(Object.values(r)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }
+  return null;
+}
+const asSpecs = sp => sp instanceof Metric ? { [sp.name]: sp } : sp;
+class Widget {
+  constructor(type, title, group, spec, mods, opts) { this.type = type; this.title = title; this.group = group; this.spec = spec; this.mods = mods; this.opts = opts || {}; }
+  async compute(ctx) {
+    const o = this.opts, g = typeof this.group === "function" ? this.group(ctx.vars) : this.group, spec = this.spec;
+    if (this.group != null && !(g instanceof Group)) throw new TypeError(this.type + "(): second argument must be a group like d.containers(...)");
+    switch (this.type) {
+      case "stat": {
+        const v = await scalarOf(g, spec, this); let ser = [];
+        try { ser = avgPts(leaves(rawOf(await g.history(spec, ...wmods(this, ctx, 40, true))))).map(p => p.v); } catch (e) {}
+        const delta = ser.length > 1 && ser[0] ? (ser[ser.length - 1] - ser[0]) / Math.abs(ser[0]) * 100 : null;
+        return { value: v, state: stateOf(v, o), series: ser, delta };
+      }
+      case "gauge": { const v = await scalarOf(g, spec, this); return { value: v, min: o.min != null ? o.min : 0, max: o.max != null ? o.max : 100, state: stateOf(v, o) }; }
+      case "line": case "area": {
+        const specs = asSpecs(spec), ks = Object.keys(specs), series = [];
+        for (const k of ks) for (const l of leaves(rawOf(await g.history(specs[k], ...wmods(this, ctx, 60)))))
+          series.push({ name: ks.length > 1 ? (l.name ? k + "/" + l.name : k) : (l.name || g.name || k), pts: l.pts });
+        return { series: series.slice(0, 12), t0: world.t - ctx.range, t1: world.t };
+      }
+      case "bar": {
+        const specs = asSpecs(spec), ser = [], labels = [];
+        for (const k of Object.keys(specs)) { const ent = await entriesOf(g, specs[k], this); ent.forEach(([l]) => labels.includes(l) || labels.push(l)); ser.push({ name: k, map: new Map(ent) }); }
+        if (o.sort && ser[0]) labels.sort((a, b) => (ser[0].map.get(b) || 0) - (ser[0].map.get(a) || 0));
+        const L = labels.slice(0, o.limit || 14);
+        return { labels: L, series: ser.map(s => ({ name: s.name, values: L.map(l => s.map.has(l) ? s.map.get(l) : null) })) };
+      }
+      case "donut": {
+        const ent = (await entriesOf(g, spec, this)).filter(e => e[1] > 0).sort((a, b) => b[1] - a[1]);
+        const sl = ent.slice(0, 7).map(([label, value]) => ({ label, value })), rest = ent.slice(7).reduce((a, e) => a + e[1], 0);
+        if (rest > 0) sl.push({ label: "other", value: rest });
+        return { slices: sl, total: sl.reduce((a, x) => a + x.value, 0) };
+      }
+      case "table": {
+        const specs = asSpecs(spec), cols = Object.keys(specs), maps = {}, names = [];
+        for (const k of cols) { const ent = await entriesOf(g, specs[k], this); maps[k] = new Map(ent); ent.forEach(([n]) => names.includes(n) || names.push(n)); }
+        let rows = names.map(n => ({ name: n, cells: Object.fromEntries(cols.map(k => [k, maps[k].has(n) ? maps[k].get(n) : null])) }));
+        const sk = o.sort || cols[0], dir = o.asc ? 1 : -1;
+        rows.sort((a, b) => dir * ((a.cells[sk] == null ? -Infinity : a.cells[sk]) - (b.cells[sk] == null ? -Infinity : b.cells[sk])));
+        rows = rows.slice(0, o.limit || 12);
+        const co = o.columns || {};
+        rows.forEach(r => r.st = Object.fromEntries(cols.map(k => [k, stateOf(r.cells[k], co[k])])));
+        return { cols, rows, colMax: Object.fromEntries(cols.map(k => [k, co[k] && co[k].max != null ? co[k].max : Math.max(1e-9, ...rows.map(r => r.cells[k] || 0))])),
+          colOpts: Object.fromEntries(cols.map(k => [k, { unit: (co[k] || {}).unit, bar: !!(co[k] || {}).bar, dec: (co[k] || {}).dec }])) };
+      }
+      case "heatmap": {
+        const mods = wmods(this, ctx, 30); if (spec.reducer && !mods.some(x => x.__by)) mods.push(by("name"));
+        const ls = leaves(rawOf(await g.history(spec, ...mods))).slice(0, 16);
+        const times = [...new Set(ls.flatMap(l => l.pts.map(p => p.t)))].sort((a, b) => a - b);
+        const cells = ls.map(l => { const m = new Map(l.pts.map(p => [p.t, p.v])); return times.map(t => m.has(t) ? m.get(t) : null); });
+        const vals = cells.flat().filter(v => v != null);
+        return { rows: ls.map(l => l.name || g.name || spec.name), times, cells, min: o.min != null ? o.min : Math.min(...vals), max: o.max != null ? o.max : Math.max(...vals) };
+      }
+      case "grid": return { tiles: (await entriesOf(g, spec, this)).map(([name, value]) => ({ name, value, state: stateOf(value, o) })) };
+      case "top": {
+        const ent = (await entriesOf(g, spec, this)).sort((a, b) => o.asc ? a[1] - b[1] : b[1] - a[1]).slice(0, o.n || o.limit || 6);
+        return { items: ent.map(([name, value]) => ({ name, value, state: stateOf(value, o) })), max: o.max != null ? o.max : Math.max(1e-9, ...ent.map(e => e[1])) };
+      }
+      case "histogram": {
+        const vs = leaves(rawOf(await g.history(spec, ...wmods(this, ctx, 60)))).flatMap(l => l.pts.map(p => p.v)).filter(v => v != null && isFinite(v));
+        const n = o.bins || 12; let lo = o.min != null ? o.min : Math.min(...vs), hi = o.max != null ? o.max : Math.max(...vs); if (!vs.length) { lo = 0; hi = 1; } if (hi === lo) hi = lo + 1;
+        const bins = Array.from({ length: n }, (_, i) => ({ lo: lo + (hi - lo) * i / n, hi: lo + (hi - lo) * (i + 1) / n, n: 0 }));
+        for (const v of vs) { const i = Math.min(n - 1, Math.max(0, Math.floor((v - lo) / (hi - lo) * n))); bins[i].n++; }
+        return { bins, total: vs.length, p50: p50.fn(vs), p95: p95.fn(vs) };
+      }
+      case "sparks": {
+        const mods = wmods(this, ctx, 30); if (spec.reducer && !mods.some(x => x.__by)) mods.push(by("name"));
+        const ls = leaves(rawOf(await g.history(spec, ...mods))).slice(0, o.limit || 8);
+        return { rows: ls.map(l => { const v = l.pts.length ? l.pts[l.pts.length - 1].v : null; return { name: l.name || g.name || spec.name, pts: l.pts.map(p => p.v), value: v, state: stateOf(v, o) }; }) };
+      }
+      case "events": { const ty = o.types; return { items: world.events.filter(e => !ty || ty.includes(e.type)).slice(-(o.limit || 8)).reverse() }; }
+      case "text": return { body: typeof spec === "function" ? String(await spec(ctx)) : String(spec) };
+      case "kv": return { pairs: Object.entries(await spec(ctx)) };
+    }
+    throw new Error("unknown widget " + this.type);
+  }
+}
+const wfac = type => (title, group, spec, ...rest) => new Widget(type, title, group, spec, rest.filter(x => !isOpts(x)), Object.assign({}, ...rest.filter(isOpts)));
+const stat = wfac("stat"), gauge = wfac("gauge"), line = wfac("line"), area = wfac("area"), bar = wfac("bar"), donut = wfac("donut"),
+  table = wfac("table"), heatmap = wfac("heatmap"), grid = wfac("grid"), top = wfac("top"), histogram = wfac("histogram"), sparks = wfac("sparks");
+const events = (title, opts) => new Widget("events", title, null, null, [], opts);
+const text = (title, body, opts) => new Widget("text", title, null, body, [], opts);
+const kv = (title, fn, opts) => new Widget("kv", title, null, fn, [], opts);
+class Dashboard {
+  constructor(title, o) {
+    o = o || {}; this.title = title; this.ev = sec(o.every || "5s"); this.rng = sec(o.range || "15m"); this.rngOpts = [300, 900, 1800];
+    if (!this.rngOpts.includes(this.rng)) this.rngOpts.push(this.rng); this.rngOpts.sort((a, b) => a - b);
+    this.vars = []; this.items = []; this.snap = null; this.item = null; this.lastT = -1e9; this.lastReal = 0; this.busy = false; this.again = false;
+  }
+  var(name, options, def) { options = [].concat(options); this.vars.push({ name, options, value: def === undefined ? options[0] : def }); return this; }
+  range(d, options) { this.rng = sec(d); if (options) this.rngOpts = options.map(sec); if (!this.rngOpts.includes(this.rng)) this.rngOpts.push(this.rng); this.rngOpts.sort((a, b) => a - b); return this; }
+  every(d) { this.ev = sec(d); return this; }
+  section(t) { this.items.push({ section: t }); return this; }
+  row(...ws) { ws = ws.flat(); for (const w of ws) if (!(w instanceof Widget)) throw new TypeError("row(): expected widgets such as stat(), line() or table()"); this.items.push({ widgets: ws }); return this; }
+  setVar(n, v) { const x = this.vars.find(y => y.name === n); if (x) x.value = v; return this.refresh(true); }
+  setRange(s) { this.rng = s; return this.refresh(true); }
+  async refresh(force) {
+    if (this.busy) { if (force) this.again = true; return; }
+    const now = performance.now(); if (!force && now - this.lastReal < 300) return;
+    this.busy = true; this.lastReal = now; this.lastT = world.t;
+    try {
+      const ctx = { vars: Object.fromEntries(this.vars.map(v => [v.name, v.value])), range: this.rng }, rows = []; let id = 0;
+      for (const it of this.items) {
+        if (it.section) { rows.push({ section: it.section }); continue; }
+        const ws = [];
+        for (const w of it.widgets) { let data = null, error = null; try { data = await w.compute(ctx); } catch (e) { error = e && e.message || String(e); }
+          ws.push({ id: id++, type: w.type, title: w.title, o: w.opts, span: w.opts.span || DEFSPAN[w.type], data, error }); }
+        rows.push({ widgets: ws });
+      }
+      this.snap = { title: this.title, t: world.t, vars: this.vars.map(v => ({ name: v.name, options: v.options, value: v.value })), range: this.rng, rangeOptions: this.rngOpts, rows };
+    } finally { this.busy = false; if (this.again) { this.again = false; this.refresh(true); } }
+  }
+  show() {
+    if (this.item) return this; world.board = { dash: this };
+    this.item = engine.add({ label: "dashboard " + this.title, tick: () => { if (world.t - this.lastT >= this.ev) return this.refresh(); }, stop: () => { engine.remove(this.item); this.item = null; } });
+    this.refresh(true); return this;
+  }
+  stop() { if (this.item) this.item.stop(); return this; }
+  snapshot() { return this.snap; }
+  toJSON() { return this.snap || { title: this.title }; }
+}
+const dashboard = (title, o) => new Dashboard(title, o);
+
+const API = Object.assign(Object.create(null), {
+  docker, fleet, metric, rule, emit, cpu, mem, net, io, pids, pct, mb, kb, gb, round, of, rate,
+  avg, sum, min, max, p50, p95, p99, count, by, last, since, bucket,
+  gt, gte, lt, lte, eq, between, and, or, not, sustained, add, sub, mul, div, maxOf, minOf,
+  dashboard, stat, gauge, line, area, bar, donut, table, heatmap, grid, top, histogram, sparks, events, text, kv,
+  prometheus, statsd, json, file, tap, sleep, chaos, time: timeStr, now: () => world.t, spark,
+});
+
+/* ───────────── console formatting ───────────── */
+const rep = (k, x) => typeof x === "number" ? (Number.isInteger(x) ? x : +x.toFixed(4)) : x instanceof Map ? Object.fromEntries(x) : x;
+function fmt(v) {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(Number.isInteger(v) ? v : +v.toFixed(4));
+  if (v === undefined) return "undefined";
+  if (typeof v === "function") return "[Function]";
+  if (v instanceof Error) return v.message;
+  try { const c = JSON.stringify(v, rep); if (c === undefined) return String(v); return c.length <= 76 ? c : JSON.stringify(v, rep, 2); } catch (e) { return String(v); }
+}
+function toRows(d) {
+  const o = x => x && typeof x === "object" && !Array.isArray(x);
+  if (Array.isArray(d)) return d.map(x => o(x) ? x : { value: x });
+  if (o(d)) return Object.entries(d).map(([k, v]) => o(v) ? Object.assign({ key: k }, v) : { key: k, value: v });
+  return [{ value: d }];
+}
+const store = { entries: [], seq: 0, ver: 0 };
+function makeConsole(alive) {
+  const push = (level, e) => { if (!alive()) return; e.id = ++store.seq; e.level = level; store.entries.push(e); if (store.entries.length > 500) store.entries.shift(); store.ver++; };
+  const text = level => (...a) => push(level, { text: a.map(fmt).join(" ") });
+  return { log: text("log"), info: text("info"), debug: text("log"), warn: text("warn"), error: text("error"),
+    table: d => { const rows = toRows(d), cols = []; rows.forEach(r => Object.keys(r).forEach(k => cols.includes(k) || cols.push(k))); push("table", { rows, cols }); },
+    clear: () => { store.entries.length = 0; store.ver++; } };
+}
+
+/* ───────────── run user code ───────────── */
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+async function runCode(code, con, alive) {
+  engine.stopAll(); world.clearSinks(); world.board = null;
+  for (const s of world.sims) { s.mode = "normal"; s.leak = 0; }
+  const src = code.replace(/^\s*import[\s\S]*?from\s*["'][^"']+["'];?[ \t]*/gm, "");
+  const fn = new AsyncFunction("__api", "console", "with(__api){ return await (async () => {\n" + src + "\n})(); }");
+  try { return await fn(API, con); }
+  catch (e) { if (e instanceof Halt || !alive()) return; throw e; }
+}
+
+world.reset();
+G.DM = { API, world, engine, runCode, makeConsole, store, Halt, chaos, timeStr, fmt, SPEC };
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script>(function () {
+"use strict";
+const { useState, useEffect, useRef, useMemo, useCallback, memo } = React;
+const h = React.createElement;
+const { API, world, engine, runCode, makeConsole, store, timeStr } = DM;
+const PRESETS = [{"id": "one-metric", "group": "Basics", "title": "One container, one metric", "desc": "Read a single number", "code": "// Simplest: one container, one metric.\n// cpu is a fraction of one core (0.42 = 42%).\nconst web = docker().container(\"web\");\n\nconsole.log(\"cpu\", await web.read(cpu));\nconsole.log(\"mem\", await web.read(mem), \"bytes\");\n"}, {"id": "multi-metric", "group": "Basics", "title": "Several metrics at once", "desc": "Pass an object, get an object", "code": "// Pass an object of metrics, get an object of values back.\nconst web = docker().container(\"web\");\n\nconst snap = await web.read({ cpu, mem, net, io, pids });\nconsole.log(snap);\n\n// net and io are counters; their parts are metrics too\nconsole.log(\"rx so far:\", await web.read(net.rx), \"bytes\");\n"}, {"id": "selectors", "group": "Basics", "title": "Selecting containers", "desc": "Name, glob, label, image, host", "code": "const d = docker();\nconst show = (label, group) =>\n  console.log(label.padEnd(22), group.names().join(\", \") || \"\u2014\");\n\nshow(\"container(web)\",     d.container(\"web\"));\nshow(\"containers(web-*)\",  d.containers(\"web-*\"));\nshow(\"label tier=backend\", d.containers({ label: \"tier=backend\" }));\nshow(\"label app=worker\",   d.containers({ label: \"app=worker\" }));\nshow(\"image /^postgres/\",  d.containers({ image: /^postgres/ }));\nshow(\"image node:20\",      d.containers({ image: \"node:20\" }));\nshow(\"all running\",        d.containers());\n\n// A group is a live selector: it re-resolves every time you use it.\nconst workers = d.containers(\"worker-*\");\nconsole.log(\"workers now:\", await workers.read(cpu));\n"}, {"id": "units", "group": "Basics", "title": "Units and derived values", "desc": "Pipes: mb, of(), pct, rate()", "code": "const web = docker().container(\"api-1\");\n\nconsole.log(\"mem (MB)      \", await web.read(mem.pipe(mb)));\nconsole.log(\"mem % of limit\", await web.read(mem.pipe(of(\"limit\"), pct)));\nconsole.log(\"rx bytes/sec  \", await web.read(net.rx.pipe(rate(\"1s\"))));\nconsole.log(\"tx MB/min     \", await web.read(net.tx.pipe(rate(\"1m\"), mb)));\n\n// Pipes are values \u2014 store and reuse them\nconst memPct = mem.pipe(of(\"limit\"), pct);\nconsole.log(\"api-1 / api-2\", await docker().containers(\"api-*\").read(memPct));\n"}, {"id": "stream-iter", "group": "Streaming", "title": "Stream with for await", "desc": "Every read has a live twin", "code": "// Every read has a live twin. Sim time passes at the speed you set above.\nconst d = docker();\n\nconst frames = d.containers(\"web-*\").stream(cpu, { every: \"2s\" }).take(4);\nfor await (const s of frames) {\n  console.log(timeOf(s.t), s.container.padEnd(6), (s.value * 100).toFixed(1) + \"%\");\n}\nconsole.log(\"stream closed after 4 frames\");\n\nfunction timeOf(t) { return time(t); }\n"}, {"id": "stream-multi", "group": "Streaming", "title": "Streaming an object", "desc": "Several metrics per frame, tapped to console", "code": "const d = docker();\n\nd.containers({ label: \"tier=backend\" })\n  .stream(\n    {\n      cpu: cpu.pipe(avg),\n      mem: mem.pipe(of(\"limit\"), pct, avg),\n      rx:  net.rx.pipe(rate(\"1s\"), kb, sum),\n    },\n    { every: \"5s\" }\n  )\n  .to(tap(f => console.log(time(f.t), f.data)))\n  .take(5);\n"}, {"id": "sinks", "group": "Streaming", "title": "Sinks: Prometheus, StatsD, file", "desc": "Open the Sinks tab to watch", "code": "// Open the Sinks tab \u21e2 the exporters fill up while this runs.\nconst d = docker();\n\nd.containers({ label: \"tier=backend\" })\n  .stream(\n    { cpu, mem: mem.pipe(mb), rx: net.rx.pipe(rate(\"1s\")) },\n    { every: \"2s\" }\n  )\n  .to(prometheus({ port: 9100, prefix: \"dock_\" }))\n  .to(statsd(\"udp://localhost:8125\", { prefix: \"dock.\" }))\n  .to(file(\"./metrics.ndjson\", json));\n\nconsole.log(\"streaming every 2s \u2014 see the Sinks tab\");\n"}, {"id": "aggregate", "group": "Aggregation", "title": "Aggregation across a group", "desc": "avg, sum, max, p95", "code": "import { docker, cpu, mem, avg, sum, max, p95, mb } from \"dockermetrics\";\nconst d = docker();\n\nconsole.log(\"api avg cpu     \", await d.containers({ label: \"app=api\" }).read(cpu.pipe(avg)));\nconsole.log(\"worker mem (MB) \", await d.containers(\"worker-*\").read(mem.pipe(sum, mb)));\nconsole.log(\"busiest backend \", await d.containers({ label: \"tier=backend\" }).read(cpu.pipe(max)));\n\n// Add { window } to reduce over time first, then across the group\nconsole.log(\"worker cpu p95/5m\", await d.containers(\"worker-*\").read(cpu.pipe(p95, { window: \"5m\" })));\n"}, {"id": "grouping", "group": "Aggregation", "title": "Grouping with by()", "desc": "Nest results by service, image or host", "code": "const d = docker();\n\nconsole.log(\"cpu by service\");\nconsole.log(await d.containers().read(cpu.pipe(avg), by(\"label:service\")));\n\nconsole.log(\"mem MB by image\");\nconsole.log(await d.containers().read(mem.pipe(sum, mb), by(\"image\")));\n\nconsole.log(\"by tier, then service\");\nconsole.log(await d.containers().read(cpu.pipe(max), by(\"label:tier\"), by(\"label:service\")));\n"}, {"id": "history", "group": "Aggregation", "title": "History, windows and buckets", "desc": "last(), since(), bucket()", "code": "const api = docker().container(\"api-1\");\n\nconst rows = await api.history(cpu.pipe(pct), last(\"15m\"), bucket(\"1m\", avg));\nconsole.log(spark(rows.map(r => r.v)), \"\u2190 api-1 cpu %, 15 min\");\nconsole.table(rows.slice(-6).map(r => ({ time: time(r.t), cpu: r.v })));\n\nconst peaks = await api.history(mem.pipe(mb), last(\"30m\"), bucket(\"5m\", max));\nconsole.table(peaks.map(r => ({ time: time(r.t), \"mem MB (peak)\": r.v })));\n"}, {"id": "predicates", "group": "Alerts", "title": "Predicates", "desc": "is(), and/or/not, sustained()", "code": "const d = docker();\nconst backend = d.containers({ label: \"tier=backend\" });\n\nconst hot   = cpu.is(gt(0.9));\nconst bloat = mem.pipe(of(\"limit\")).is(gt(0.85));\nconst sick  = or(hot, bloat);\n\nconsole.log(\"sick right now:\", await backend.read(sick));\nconsole.log(\"cpu above 25%: \", await backend.read(cpu.is(gt(0.25))));\n\nconsole.log(\"\u2192 spiking worker-1\u2026\");\nchaos.spike(\"worker-1\");\nawait sleep(\"130s\");\n\nconst w1 = d.container(\"worker-1\");\nconsole.log(\"hot now        \", await w1.check(hot));\nconsole.log(\"hot for 2 min  \", await w1.check(sustained(hot, \"2m\")));\n"}, {"id": "rules", "group": "Alerts", "title": "Rules: when \u2192 then", "desc": "Auto-restart after sustained CPU", "code": "const d = docker();\n\nd.on(\"alert\", ({ rule, container, value, at }) =>\n  console.warn(`[${rule}] ${container.name} cpu=${Number(value).toFixed(2)} @ ${time(at)}`));\n\nd.containers({ label: \"tier=backend\" }).watch(\n  rule(\"cpu-saturation\")\n    .when(sustained(cpu.is(gt(0.9)), \"2m\"))\n    .then(emit(\"alert\"), c => c.restart())\n    .cooldown(\"10m\")\n);\n\nconsole.log(\"watching backend\u2026 spiking api-1\");\nchaos.spike(\"api-1\");\nawait sleep(\"5m\");\nconsole.log(\"api-1 restarts:\", d.container(\"api-1\").inspect().restarts);\n"}, {"id": "events", "group": "Alerts", "title": "Event bus and wildcard listener", "desc": "Listen to everything", "code": "const d = docker();\n\n// \"*\" receives every event with its name as the 2nd argument\nd.on(\"*\", (e, name) => console.log(`${time(e.at)} \u2691 ${name}`, e.container.name));\nd.on(\"page\", e => console.warn(\"\ud83d\udcdf paging on-call about\", e.container.name));\n\nconst leaky = mem.pipe(of(\"limit\"), pct);\nd.containers(\"worker-*\").watch(\n  rule(\"high-mem\").when(leaky.is(gt(70))).then(emit(\"warn\")).cooldown(\"5m\"),\n  rule(\"critical-mem\").when(sustained(leaky.is(gt(85)), \"90s\")).then(emit(\"page\")).cooldown(\"15m\")\n);\n\nchaos.leak(\"worker-3\");\nconsole.log(\"worker-3 is leaking\u2026\");\nawait sleep(\"9m\");\n"}, {"id": "leak-heal", "group": "Alerts", "title": "Memory leak with self-healing", "desc": "Detect, page, restart with grace", "code": "const d = docker();\nconst memPct = mem.pipe(of(\"limit\"), pct);\n\nd.on(\"page\", e => console.warn(`\ud83d\udcdf ${e.container.name} at ${e.value.toFixed(0)}% memory`));\n\nd.containers(\"worker-*\").watch(\n  rule(\"memory-leak\")\n    .when(sustained(memPct.is(gt(85)), \"3m\"))\n    .then(emit(\"page\"), c => c.restart({ grace: \"5s\" }))\n    .cooldown(\"30m\")\n);\n\nchaos.leak(\"worker-2\");\nfor (let i = 0; i < 6; i++) {\n  await sleep(\"2m\");\n  console.log(time(now()), \"worker-2 mem%\", (await d.container(\"worker-2\").read(memPct)).toFixed(0));\n}\n"}, {"id": "custom", "group": "Advanced", "title": "Custom metrics", "desc": "Define your own primitive", "code": "const d = docker();\n\nconst pidsRatio = metric(\"pids-ratio\", async c => {\n  const { current, limit } = await c.read(pids);\n  return current / limit;\n});\n\nconst headroomMB = metric(\"headroom-mb\", async c =>\n  ((await c.read(mem.limit)) - (await c.read(mem))) / 1e6);\n\nconsole.log(\"pids ratio\", await d.containers(\"api-*\").read(pidsRatio));\nconsole.log(\"headroom  \", await d.containers({ label: \"tier=backend\" }).read(headroomMB.pipe(round(0))));\nconsole.log(\"db pids < 10%?\", await d.container(\"db\").read(pidsRatio.is(lt(0.1))));\n"}, {"id": "compose", "group": "Advanced", "title": "Composition", "desc": "Metrics are values \u2014 add, mul, div", "code": "const d = docker();\n\nconst efficiency = div(cpu, mem.pipe(mb));              // cpu per MB\nconst pressure   = add(cpu, mul(mem.pipe(of(\"limit\")), 0.5));\n\nconsole.log(\"cpu per MB (avg per container)\");\nconsole.log(await d.containers(\"api-*\").read(efficiency.pipe(avg), by(\"name\")));\n\nconsole.log(\"pressure score\");\nconsole.log(await d.containers({ label: \"tier=backend\" }).read(pressure.pipe(round(2))));\n\nconsole.log(\"is anything above 0.8?\");\nconsole.log(await d.containers().read(pressure.is(gt(0.8))));\n"}, {"id": "pipeline", "group": "Advanced", "title": "Full pipeline", "desc": "Remote host, stream, sink, rules in one expression", "code": "const prod = docker({ host: \"ssh://ops@prod-1\" })\n  .containers({ label: \"env=prod\" });\n\nconst memPct = mem.pipe(of(\"limit\"), pct);\nconst notifyOncall = e => console.warn(`\ud83d\udcdf oncall: ${e.container.name} ${e.rule}`);\n\nprod\n  .stream(\n    {\n      cpu:    cpu.pipe(p95, { window: \"5m\" }),\n      mem:    memPct,\n      egress: net.tx.pipe(rate(\"1s\"), mb),\n    },\n    { every: \"10s\" },\n    by(\"label:service\")\n  )\n  .to(prometheus({ port: 9100 }))\n  .to(tap(f => console.log(time(f.t), \"frame\", Object.keys(f.value.cpu).join(\",\"))))\n  .watch(\n    rule(\"memory-leak\")\n      .when(sustained(memPct.is(gt(85)), \"3m\"))\n      .then(emit(\"page\"), c => c.restart({ grace: \"30s\" }))\n      .cooldown(\"1h\"),\n    rule(\"cpu-burn\")\n      .when(cpu.pipe(avg, { window: \"1m\" }).is(gt(0.95)))\n      .then(emit(\"warn\"))\n  )\n  .on(\"page\", notifyOncall)\n  .start();\n\nchaos.leak(\"search-1\");\nconsole.log(\"watching prod-1 (\", prod.names().join(\", \"), \")\");\n"}, {"id": "fleet", "group": "Advanced", "title": "Multi-host fleet report", "desc": "History across hosts, flattened", "code": "const all = fleet([\n  docker({ host: \"ssh://prod-1\" }),\n  docker({ host: \"ssh://prod-2\" }),\n  docker({ host: \"tcp://prod-3:2375\" }),\n]);\n\nconst report = await all\n  .containers({ label: \"app=checkout\" })\n  .history(\n    { cpu: cpu.pipe(pct, avg), mem: mem.pipe(of(\"limit\"), pct, max) },\n    last(\"30m\"),\n    bucket(\"10m\"),\n    by(\"host\")\n  );\n\nconsole.table(report.flatten());\n"}, {"id": "dash-basic", "group": "Dashboards", "title": "Hello, dashboard", "desc": "stat, gauge, line, top in four lines", "code": "const d = docker();\nconst api = d.containers({ label: \"app=api\" });\n\ndashboard(\"API at a glance\", { every: \"3s\", range: \"10m\" })\n  .row(\n    stat(\"CPU\", api, cpu.pipe(pct, avg), { unit: \"%\", warn: gt(60), crit: gt(85) }),\n    stat(\"Memory\", api, mem.pipe(of(\"limit\"), pct, avg), { unit: \"%\", warn: gt(70), crit: gt(90) }),\n    gauge(\"Busiest replica\", api, cpu.pipe(pct, max), { unit: \"%\", warn: gt(60), crit: gt(85) })\n  )\n  .row(\n    line(\"CPU by replica\", api, cpu.pipe(pct), { unit: \"%\", span: 8 }),\n    top(\"Memory\", api, mem.pipe(mb), { unit: \"MB\", span: 4 })\n  )\n  .show();\n\nconsole.log(\"Dashboard is live \u2192 open the Dashboard tab. Try Fleet \u25b8 Spike backend.\");\n"}, {"id": "dash-zoo", "group": "Dashboards", "title": "Widget zoo", "desc": "All fifteen widget types", "code": "const d = docker();\nconst be = d.containers({ label: \"tier=backend\" });\nconst all = d.containers();\nconst memPct = mem.pipe(of(\"limit\"), pct);\n\ndashboard(\"Widget zoo\", { every: \"5s\", range: \"15m\" })\n  .section(\"Numbers\")\n  .row(\n    stat(\"Avg CPU\", be, cpu.pipe(pct, avg), { unit: \"%\", warn: gt(50), crit: gt(80) }),\n    stat(\"Avg memory\", be, memPct.pipe(avg), { unit: \"%\", warn: gt(70), crit: gt(90) }),\n    gauge(\"Hottest\", be, cpu.pipe(pct, max), { unit: \"%\", warn: gt(60), crit: gt(85) }),\n    kv(\"Facts\", () => ({ containers: all.size, backend: be.size, \"api-1 restarts\": d.container(\"api-1\").inspect().restarts }))\n  )\n  .section(\"Time series\")\n  .row(\n    line(\"CPU per container\", be, cpu.pipe(pct), { unit: \"%\" }),\n    area(\"Memory by service (stacked)\", all, mem.pipe(mb, sum), by(\"label:service\"), { unit: \"MB\", stack: true })\n  )\n  .section(\"Breakdowns\")\n  .row(\n    bar(\"Memory per service\", all, mem.pipe(mb, sum), by(\"label:service\"), { unit: \"MB\" }),\n    donut(\"CPU share\", all, cpu.pipe(sum), by(\"label:service\")),\n    top(\"Busiest p95 / 10m\", be, cpu.pipe(pct, p95, { window: \"10m\" }), { unit: \"%\", n: 5, warn: gt(60), crit: gt(85) })\n  )\n  .section(\"Detail\")\n  .row(\n    table(\"Containers\", be,\n      { cpu: cpu.pipe(pct), mem: memPct, rx: net.rx.pipe(rate(\"1s\"), kb) },\n      { sort: \"cpu\", limit: 7, columns: {\n          cpu: { unit: \"%\", bar: true, warn: gt(60), crit: gt(85), max: 100 },\n          mem: { unit: \"%\", bar: true, warn: gt(70), crit: gt(90), max: 100 },\n          rx:  { unit: \"KB/s\", dec: 0 } } }),\n    heatmap(\"CPU heat, last 15m\", be, cpu.pipe(pct), { min: 0, max: 100 })\n  )\n  .row(\n    grid(\"Health\", be, memPct, { warn: gt(70), crit: gt(90), unit: \"%\" }),\n    histogram(\"CPU distribution\", be, cpu.pipe(pct), { bins: 10, unit: \"%\" }),\n    sparks(\"Workers\", d.containers(\"worker-*\"), cpu.pipe(pct), { unit: \"%\", warn: gt(70) })\n  )\n  .row(\n    events(\"Recent events\", { limit: 6 }),\n    text(\"Notes\", \"# Reading this board\\n- **Cards** turn amber/red at warn/crit\\n- Use the Fleet tab to inject chaos\\n- Every widget is just a *group + metric + options*\")\n  )\n  .show();\n"}, {"id": "dash-ops", "group": "Dashboards", "title": "Ops board with variables", "desc": "var(), range(), function groups", "code": "// Groups can be functions of the dashboard variables.\nconst all = fleet([\n  docker(),\n  docker({ host: \"ssh://prod-1\" }), docker({ host: \"ssh://prod-2\" }), docker({ host: \"tcp://prod-3:2375\" }),\n]);\nconst memPct = mem.pipe(of(\"limit\"), pct);\nconst scope = v => all.containers(s =>\n  s.labels.env === v.env && (v.service === \"all\" || s.labels.service === v.service) && s.state !== \"stopped\");\n\ndashboard(\"Ops board\", { every: \"4s\", range: \"15m\" })\n  .var(\"env\", [\"prod\", \"dev\"])\n  .var(\"service\", [\"all\", \"api\", \"checkout\", \"search\", \"worker\", \"db\"])\n  .range(\"15m\", [\"5m\", \"15m\", \"30m\"])\n  .row(\n    stat(\"CPU\", scope, cpu.pipe(pct, avg), { unit: \"%\", warn: gt(60), crit: gt(85) }),\n    stat(\"Memory\", scope, memPct.pipe(avg), { unit: \"%\", warn: gt(70), crit: gt(90) }),\n    stat(\"Egress\", scope, net.tx.pipe(rate(\"1s\"), kb, sum), { unit: \"KB/s\" }),\n    stat(\"Containers\", scope, cpu.pipe(count))\n  )\n  .row(\n    line(\"CPU by service\", scope, cpu.pipe(pct, avg), by(\"label:service\"), { unit: \"%\", span: 7 }),\n    donut(\"Memory share\", scope, mem.pipe(mb, sum), by(\"label:service\"), { span: 5 })\n  )\n  .row(\n    table(\"Hosts\", scope, { cpu: cpu.pipe(pct, avg), mem: memPct.pipe(avg) }, by(\"host\"),\n      { columns: { cpu: { unit: \"%\", bar: true, max: 100 }, mem: { unit: \"%\", bar: true, max: 100 } }, span: 5 }),\n    heatmap(\"Memory % heat\", scope, memPct, { min: 0, max: 100, span: 7 })\n  )\n  .show();\n\nconsole.log(\"Change env / service in the dashboard header.\");\n"}, {"id": "dash-fleet", "group": "Dashboards", "title": "Prod fleet wall", "desc": "Health tiles, heat and histograms", "code": "const prod = fleet([\n  docker({ host: \"ssh://prod-1\" }), docker({ host: \"ssh://prod-2\" }), docker({ host: \"tcp://prod-3:2375\" }),\n]);\nconst g = prod.containers({ label: \"env=prod\" });\nconst memPct = mem.pipe(of(\"limit\"), pct);\n\ndashboard(\"Prod fleet\", { every: \"5s\", range: \"15m\" })\n  .row(\n    grid(\"CPU\", g, cpu.pipe(pct), { unit: \"%\", warn: gt(55), crit: gt(80), span: 6 }),\n    grid(\"Memory\", g, memPct, { unit: \"%\", warn: gt(70), crit: gt(90), span: 6 })\n  )\n  .row(\n    bar(\"CPU by host (avg)\", g, cpu.pipe(pct, avg), by(\"host\"), { unit: \"%\", span: 4 }),\n    histogram(\"Memory distribution\", g, memPct, { bins: 10, unit: \"%\", span: 4 }),\n    top(\"Egress KB/s\", g, net.tx.pipe(rate(\"1s\"), kb), { unit: \"KB/s\", n: 5, span: 4 })\n  )\n  .row(heatmap(\"CPU heat by container\", g, cpu.pipe(pct), { min: 0, max: 100 }))\n  .row(sparks(\"Per-service CPU\", g, cpu.pipe(pct, avg), by(\"label:service\"), { unit: \"%\", span: 12 }))\n  .show();\n"}, {"id": "dash-slo", "group": "Dashboards", "title": "Saturation board with custom metrics", "desc": "maxOf(), metric(), kv()", "code": "// Compose a \"saturation\" signal: whichever resource is closer to its limit.\nconst d = docker();\nconst be = d.containers({ label: \"tier=backend\" });\nconst saturation = maxOf(cpu, mem.pipe(of(\"limit\"))).pipe(pct);\nconst pidUse = metric(\"pid-use\", async c => { const p = await c.read(pids); return p.current / p.limit * 100; });\n\ndashboard(\"Saturation\", { every: \"4s\", range: \"10m\" })\n  .row(\n    gauge(\"Fleet saturation\", be, saturation.pipe(avg), { unit: \"%\", warn: gt(60), crit: gt(85) }),\n    gauge(\"Worst container\", be, saturation.pipe(max), { unit: \"%\", warn: gt(70), crit: gt(90) }),\n    gauge(\"PID pressure\", be, pidUse.pipe(max), { unit: \"%\", warn: gt(20), crit: gt(50) }),\n    kv(\"Budget\", async () => {\n      const worst = await be.read(saturation.pipe(max));\n      return { headroom: (100 - worst).toFixed(0) + \"%\", verdict: worst > 85 ? \"act now\" : worst > 60 ? \"watch\" : \"healthy\" };\n    })\n  )\n  .row(\n    line(\"Saturation per container\", be, saturation, { unit: \"%\", span: 8, max: 100 }),\n    top(\"Most saturated\", be, saturation, { unit: \"%\", n: 6, span: 4, warn: gt(60), crit: gt(85) })\n  )\n  .row(text(\"How to read\", () => \"# Saturation\\nTakes the larger of **CPU** and **memory-of-limit** per container, as a percent.\\n- under 60: healthy\\n- 60\u201385: watch\\n- over 85: act\"))\n  .show();\n"}, {"id": "dash-compose", "group": "Dashboards", "title": "Composed from functions", "desc": "Loops and widget factories", "code": "// Widgets are values: build them with functions and loops.\nconst d = docker();\nconst kpi = (title, g, m, o = {}) => stat(title, g, m, { unit: \"%\", warn: gt(60), crit: gt(85), span: 3, ...o });\nconst cpuPct = cpu.pipe(pct), memPct = mem.pipe(of(\"limit\"), pct);\n\nconst board = dashboard(\"Per-service\", { every: \"5s\", range: \"10m\" });\nfor (const service of [\"api\", \"worker\", \"web\"]) {\n  const g = d.containers({ label: \"service=\" + service });\n  board\n    .section(service)\n    .row(\n      kpi(\"cpu\", g, cpuPct.pipe(avg)),\n      kpi(\"memory\", g, memPct.pipe(avg), { warn: gt(70), crit: gt(90) }),\n      sparks(\"replicas\", g, cpuPct, { unit: \"%\", span: 6, warn: gt(70) })\n    );\n}\nboard.show();\n"}, {"id": "dash-incident", "group": "Dashboards", "title": "Live incident room", "desc": "Run at 30\u00d7 \u2014 dashboard reacts to chaos", "code": "// Run at 30\u00d7 or faster. The board, rules and events all move together.\nconst d = docker();\nconst be = d.containers({ label: \"tier=backend\" });\nconst memPct = mem.pipe(of(\"limit\"), pct);\n\nbe.watch(\n  rule(\"cpu-saturation\").when(sustained(cpu.is(gt(0.9)), \"90s\")).then(emit(\"alert\"), c => c.restart()).cooldown(\"10m\"),\n  rule(\"mem-leak\").when(sustained(memPct.is(gt(85)), \"2m\")).then(emit(\"page\"), c => c.restart({ grace: \"10s\" })).cooldown(\"20m\")\n);\n\ndashboard(\"Incident room\", { every: \"3s\", range: \"10m\" })\n  .row(\n    stat(\"Backend CPU\", be, cpu.pipe(pct, avg), { unit: \"%\", warn: gt(50), crit: gt(80) }),\n    stat(\"Backend memory\", be, memPct.pipe(avg), { unit: \"%\", warn: gt(65), crit: gt(85) }),\n    kv(\"Restarts\", () => Object.fromEntries(be.names().map(n => [n, d.container(n).inspect().restarts]).filter(e => e[1])))\n  )\n  .row(\n    line(\"CPU\", be, cpu.pipe(pct), { unit: \"%\", span: 6 }),\n    line(\"Memory\", be, memPct, { unit: \"%\", span: 6 })\n  )\n  .row(\n    grid(\"State\", be, memPct, { warn: gt(65), crit: gt(85), unit: \"%\", span: 6 }),\n    events(\"Timeline\", { types: [\"rule\", \"emit\", \"restart\", \"chaos\"], limit: 10, span: 6 })\n  )\n  .show();\n\nawait sleep(\"1m\");  chaos.spike(\"api-1\");\nawait sleep(\"4m\");  chaos.leak(\"worker-1\", \"worker-2\");\nawait sleep(\"12m\"); console.log(\"drill complete\");\n"}, {"id": "noisy", "group": "Scenarios", "title": "Noisy neighbour finder", "desc": "Rank by p95 CPU, then sparkline each", "code": "const d = docker();\n\nconst p95cpu = await d.containers().read(cpu.pipe(pct, p95, { window: \"10m\" }), by(\"name\"));\nconst top = Object.entries(p95cpu).sort((a, b) => b[1] - a[1]).slice(0, 6);\n\nfor (const [name, v] of top) {\n  const h = await d.container(name).history(cpu.pipe(pct), last(\"10m\"), bucket(\"30s\"));\n  console.log(name.padEnd(11), v.toFixed(0).padStart(3) + \"%\", spark(h.map(x => x.v)));\n}\n"}, {"id": "capacity", "group": "Scenarios", "title": "Capacity planner", "desc": "p95 memory vs limit per service", "code": "const d = docker();\nconst p95mem = await d.containers().read(\n  mem.pipe(of(\"limit\"), pct, p95, { window: \"20m\" }),\n  by(\"label:service\")\n);\n\nconsole.table(Object.entries(p95mem).map(([service, v]) => ({\n  service,\n  \"p95 mem %\": +v.toFixed(1),\n  advice: v > 80 ? \"raise limit\" : v < 35 ? \"can shrink\" : \"ok\",\n})));\n"}, {"id": "incident", "group": "Scenarios", "title": "Incident drill", "desc": "Chaos, rules, sinks \u2014 everything at once", "code": "// Run this at 30\u00d7 or faster, then watch the Fleet, Charts and Events tabs.\nconst d = docker();\nconst memPct = mem.pipe(of(\"limit\"), pct);\n\nd.on(\"*\", (e, name) => console.log(time(e.at), \"\u2691\", name, \"\u2190\", e.rule, e.container.name));\n\nd.containers({ label: \"tier=backend\" })\n  .stream({ cpu: cpu.pipe(avg), mem: memPct.pipe(avg) }, { every: \"5s\" }, by(\"label:service\"))\n  .to(prometheus({ port: 9100, prefix: \"svc_\" }))\n  .watch(\n    rule(\"cpu-saturation\").when(sustained(cpu.is(gt(0.9)), \"90s\")).then(emit(\"alert\"), c => c.restart()).cooldown(\"10m\"),\n    rule(\"mem-leak\").when(sustained(memPct.is(gt(85)), \"2m\")).then(emit(\"page\"), c => c.restart({ grace: \"10s\" })).cooldown(\"20m\")\n  );\n\nawait sleep(\"1m\");  chaos.spike(\"api-1\");\nawait sleep(\"2m\");  chaos.leak(\"worker-1\", \"worker-2\");\nawait sleep(\"10m\"); console.log(\"drill finished\");\n"}, {"id": "scratch", "group": "Sandbox", "title": "Scratchpad", "desc": "Blank page and cheat-sheet", "code": "// metrics   cpu  mem  net  io  pids   (+ net.rx net.tx io.r io.w mem.limit)\n// units     mb kb gb pct of(\"limit\") rate(\"1s\") round(n)\n// reduce    avg sum min max p50 p95 p99 count  \u2014 add { window: \"5m\" } to go over time\n// compare   gt gte lt lte eq between  \u2192 metric.is(gt(0.9))\n// combine   and or not sustained(pred, \"2m\")\n// shape     by(\"label:service\")  by(\"host\")  last(\"15m\")  bucket(\"1m\", avg)\n// act       rule(name).when(p).then(emit(\"x\"), c => c.restart()).cooldown(\"10m\")\n// chaos     chaos.spike(\"api-*\")  chaos.leak(\"worker-1\")  chaos.heal()  await sleep(\"5m\")\n\nconst d = docker();\nconsole.log(await d.containers({ label: \"tier=backend\" }).read(cpu.pipe(avg), by(\"label:service\")));\n"}];
+const COLORS = ["#e8b339", "#4fd1c5", "#f0685a", "#7cb7ff", "#c792ea", "#a5d6a0", "#f2a65e", "#ff8fab", "#9ad1d4", "#d4c5a0"];
+const SPEEDS = [1, 5, 10, 30, 60, 120];
+const narrow = () => window.matchMedia("(max-width: 860px)").matches;
+const fnum = v => v == null || !isFinite(v) ? "—" : Math.abs(v) >= 1000 ? v.toFixed(0) : Math.abs(v) >= 100 ? v.toFixed(1) : Math.abs(v) >= 1 ? v.toFixed(2) : v.toFixed(3);
+
+/* ── syntax highlighting ── */
+const KW = /^(const|let|var|await|async|for|of|if|else|return|import|from|new|function|true|false|null|undefined|break|continue|while|try|catch|throw|in)$/;
+const NAMES = new Set(Object.keys(API));
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function highlight(code) {
+  const re = /(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\[\s\S])*`)|(\b\d[\d_.]*\b)|([A-Za-z_$][\w$]*)/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(code))) {
+    out += esc(code.slice(last, m.index)); const t = m[0]; let cls = null;
+    if (m[1]) cls = "c"; else if (m[2]) cls = "s"; else if (m[3]) cls = "n";
+    else if (KW.test(t)) cls = "k";
+    else if (code[m.index - 1] === ".") cls = code[m.index + t.length] === "(" ? "f" : "p";
+    else if (NAMES.has(t)) cls = "a";
+    else if (code[m.index + t.length] === "(") cls = "f";
+    out += cls ? '<span class="t-' + cls + '">' + esc(t) + "</span>" : esc(t);
+    last = m.index + t.length;
+  }
+  return out + esc(code.slice(last)) + "\n ";
+}
+
+/* ── editor ── */
+const Editor = memo(function Editor({ value, onChange, onRun }) {
+  const ta = useRef(), pre = useRef(), gut = useRef();
+  const html = useMemo(() => highlight(value), [value]);
+  const nums = useMemo(() => Array.from({ length: value.split("\n").length }, (_, i) => i + 1).join("\n"), [value]);
+  const sync = () => { pre.current.scrollTop = ta.current.scrollTop; pre.current.scrollLeft = ta.current.scrollLeft; gut.current.scrollTop = ta.current.scrollTop; };
+  const insert = txt => { const el = ta.current; if (!document.execCommand || !document.execCommand("insertText", false, txt)) { el.setRangeText(txt, el.selectionStart, el.selectionEnd, "end"); onChange(el.value); } };
+  const onKey = e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); onRun(); return; }
+    if (e.key === "Tab") { e.preventDefault(); insert("  "); return; }
+    if (e.key === "Enter") {
+      const el = ta.current, before = el.value.slice(0, el.selectionStart), line = before.slice(before.lastIndexOf("\n") + 1);
+      const ind = /^\s*/.exec(line)[0] + (/[{(\[]\s*$/.test(line) ? "  " : "");
+      e.preventDefault(); insert("\n" + ind);
+    }
+  };
+  return h("div", { className: "editor" },
+    h("div", { className: "gutter", ref: gut }, h("pre", null, nums)),
+    h("div", { className: "code-wrap" },
+      h("pre", { className: "hl", ref: pre, "aria-hidden": true, dangerouslySetInnerHTML: { __html: html } }),
+      h("textarea", { ref: ta, className: "input", value, spellCheck: false, autoCapitalize: "off", autoCorrect: "off", autoComplete: "off", wrap: "off",
+        "aria-label": "Code editor", onChange: e => onChange(e.target.value), onScroll: sync, onKeyDown: onKey })));
+});
+
+/* ── console ── */
+function Console() {
+  const ref = useRef(), stick = useRef(true), ver = store.ver;
+  useEffect(() => { const el = ref.current; if (el && stick.current) el.scrollTop = el.scrollHeight; }, [ver]);
+  const cell = v => typeof v === "number" ? fnum(v) : v == null ? "—" : typeof v === "object" ? JSON.stringify(v) : String(v);
+  return h("div", { className: "console scroll", ref, onScroll: e => { const el = e.target; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; } },
+    store.entries.length === 0 && h("div", { className: "empty" }, h("b", null, "Nothing yet."), " Pick a preset or press Run — console.log output lands here."),
+    store.entries.map(e => e.level === "table"
+      ? h("div", { key: e.id, className: "tbl-wrap" }, h("table", null,
+          h("thead", null, h("tr", null, e.cols.map(c => h("th", { key: c }, c)))),
+          h("tbody", null, e.rows.map((r, i) => h("tr", { key: i }, e.cols.map(c => h("td", { key: c, className: typeof r[c] === "number" ? "num" : "" }, cell(r[c]))))))))
+      : h("pre", { key: e.id, className: "line " + e.level }, e.text)));
+}
+
+/* ── fleet ── */
+function Spark({ hist, get, color }) {
+  const a = hist.slice(-90), n = a.length;
+  if (n < 2) return null;
+  const pts = a.map((x, i) => (i / (n - 1) * 100).toFixed(1) + "," + (22 - Math.min(1, get(x)) * 20).toFixed(1)).join(" ");
+  return h("svg", { viewBox: "0 0 100 24", preserveAspectRatio: "none", className: "spark" },
+    h("polyline", { points: pts, fill: "none", stroke: color, strokeWidth: 1.5, vectorEffect: "non-scaling-stroke", strokeLinejoin: "round" }));
+}
+const lvl = v => v > .85 ? "var(--bad)" : v > .6 ? "var(--warn)" : "var(--ok)";
+const Bar = ({ label, v }) => h("div", { className: "bar" }, h("span", { className: "bl" }, label),
+  h("span", { className: "track" }, h("i", { style: { width: Math.min(100, v * 100) + "%", background: lvl(v) } })),
+  h("span", { className: "bv" }, (v * 100).toFixed(0) + "%"));
+function Fleet({ sel, setSel }) {
+  const hosts = [...new Set(world.sims.map(s => s.host))];
+  const cur = world.sims.find(s => s.name === sel);
+  const act = f => () => f();
+  const ref = cur && API.docker({ host: cur.host }).container(cur.name);
+  return h("div", { className: "fleet" },
+    h("div", { className: "fleet-bar" },
+      h("button", { className: "btn sm", onClick: act(() => API.chaos.spike({ label: "tier=backend", host: "local" })) }, "Spike backend"),
+      h("button", { className: "btn sm", onClick: act(() => API.chaos.leak("worker-*")) }, "Leak workers"),
+      h("button", { className: "btn sm", onClick: act(() => API.chaos.heal()) }, "Heal all"),
+      h("button", { className: "btn sm ghost", onClick: act(() => { engine.stopAll(); world.reset(); }) }, "Reset sim")),
+    h("div", { className: "scroll fleet-body" },
+      hosts.map(host => h("section", { key: host },
+        h("h3", { className: "host" }, host === "local" ? "local · unix socket" : host),
+        h("div", { className: "grid" }, world.sims.filter(s => s.host === host).map(s => {
+          const col = s.mode === "spike" ? "var(--bad)" : s.mode === "leak" ? "var(--warn)" : "var(--a)";
+          return h("button", { key: s.name, className: "card" + (sel === s.name ? " sel" : "") + (s.state !== "running" ? " off" : ""), onClick: () => setSel(sel === s.name ? null : s.name) },
+            h("div", { className: "card-h" }, h("span", { className: "dot " + s.state, title: s.state }), h("b", null, s.name),
+              s.mode !== "normal" && h("span", { className: "badge " + s.mode }, s.mode), s.restarts > 0 && h("span", { className: "rs", title: "restarts" }, "↻" + s.restarts)),
+            h("div", { className: "img" }, s.image),
+            h(Bar, { label: "cpu", v: s.cpu }), h(Bar, { label: "mem", v: s.mem / s.limit }),
+            h(Spark, { hist: s.hist, get: x => x.cpu, color: col }));
+        }))))),
+    cur && h("div", { className: "dock" },
+      h("div", { className: "dock-t" }, h("b", null, cur.name), h("span", null, cur.state + (cur.mode !== "normal" ? " · " + cur.mode : ""))),
+      h("div", { className: "dock-b" },
+        h("button", { className: "btn sm", onClick: act(() => API.chaos.spike(cur.name)) }, "CPU spike"),
+        h("button", { className: "btn sm", onClick: act(() => API.chaos.leak(cur.name)) }, "Memory leak"),
+        h("button", { className: "btn sm", onClick: act(() => ref.restart()) }, "Restart"),
+        cur.state === "stopped" ? h("button", { className: "btn sm", onClick: act(() => ref.start()) }, "Start") : h("button", { className: "btn sm", onClick: act(() => ref.stop()) }, "Stop"),
+        h("button", { className: "btn sm ghost", onClick: act(() => API.chaos.heal(cur.name)) }, "Heal"))));
+}
+
+/* ── charts ── */
+const MET = {
+  cpu: { l: "CPU %", f: s => s.cpu * 100 },
+  mem: { l: "Memory % of limit", f: (s, sim) => s.mem / sim.limit * 100 },
+  rx: { l: "Network in, KB/s", f: s => s.rx, rate: 1e3 },
+  tx: { l: "Network out, KB/s", f: s => s.tx, rate: 1e3 },
+  iow: { l: "Disk writes, KB/s", f: s => s.iow, rate: 1e3 },
+  pids: { l: "Processes", f: s => s.pids },
+};
+function seriesFor(sim, m, win) {
+  const a = sim.hist.slice(Math.max(0, sim.hist.length - win - 1)), out = [];
+  for (let i = 1; i < a.length; i++) out.push({ t: a[i].t, v: m.rate ? (m.f(a[i], sim) - m.f(a[i - 1], sim)) / (a[i].t - a[i - 1].t) / m.rate : m.f(a[i], sim) });
+  return out;
+}
+function niceMax(x) { if (x <= 0) return 1; const mag = Math.pow(10, Math.floor(Math.log10(x))); for (const k of [1, 2, 2.5, 5, 10]) if (k * mag >= x) return k * mag; return 10 * mag; }
+function Charts() {
+  const [met, setMet] = useState("cpu"), [scope, setScope] = useState("local"), [win, setWin] = useState(300), [hide, setHide] = useState({}), [hl, setHl] = useState(null);
+  const hosts = [...new Set(world.sims.map(s => s.host))], m = MET[met];
+  const sims = world.sims.filter(s => scope === "all" || s.host === scope);
+  const lines = sims.map(s => ({ s, c: COLORS[world.sims.indexOf(s) % COLORS.length], pts: seriesFor(s, m, win) })).filter(l => l.pts.length);
+  const vis = lines.filter(l => !hide[l.s.name]);
+  const t1 = world.t, t0 = t1 - win;
+  const ymax = niceMax(Math.max(met === "cpu" || met === "mem" ? 20 : 1, ...vis.flatMap(l => l.pts.map(p => p.v))) * 1.08);
+  const W = 640, H = 300, L = 46, R = 8, T = 10, B = 24;
+  const X = t => L + (t - t0) / win * (W - L - R), Y = v => T + (1 - v / ymax) * (H - T - B);
+  const ticks = [0, .25, .5, .75, 1].map(f => f * ymax);
+  const xt = [0, .25, .5, .75, 1].map(f => t0 + f * win);
+  return h("div", { className: "scroll charts" },
+    h("div", { className: "ctl" },
+      h("select", { value: met, onChange: e => setMet(e.target.value), "aria-label": "Metric" }, Object.entries(MET).map(([k, v]) => h("option", { key: k, value: k }, v.l))),
+      h("select", { value: scope, onChange: e => setScope(e.target.value), "aria-label": "Host" }, hosts.concat("all").map(x => h("option", { key: x, value: x }, x === "all" ? "all hosts" : x))),
+      h("select", { value: win, onChange: e => setWin(+e.target.value), "aria-label": "Window" }, [[60, "last 1 min"], [300, "last 5 min"], [900, "last 15 min"], [1800, "last 30 min"]].map(([v, l]) => h("option", { key: v, value: v }, l)))),
+    h("svg", { viewBox: "0 0 " + W + " " + H, className: "chart", role: "img", "aria-label": m.l + " over time" },
+      ticks.map((v, i) => h("g", { key: i }, h("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), className: "grid-l" }), h("text", { x: L - 6, y: Y(v) + 4, textAnchor: "end", className: "ax" }, fnum(v)))),
+      xt.map((t, i) => h("text", { key: i, x: X(t), y: H - 6, textAnchor: i === 0 ? "start" : i === 4 ? "end" : "middle", className: "ax" }, timeStr(Math.round(t)).slice(win <= 60 ? 3 : 0, win <= 60 ? 8 : 5))),
+      vis.map(l => h("path", { key: l.s.name, fill: "none", stroke: l.c, strokeWidth: hl === l.s.name ? 2.6 : 1.5, strokeLinejoin: "round", opacity: hl && hl !== l.s.name ? .25 : 1,
+        d: l.pts.map((p, i) => (i ? "L" : "M") + X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join("") }))),
+    h("div", { className: "legend" }, lines.map(l => h("button", { key: l.s.name, className: "lg" + (hide[l.s.name] ? " off" : ""),
+      onClick: () => setHide(x => Object.assign({}, x, { [l.s.name]: !x[l.s.name] })), onMouseEnter: () => setHl(l.s.name), onMouseLeave: () => setHl(null) },
+      h("i", { style: { background: l.c } }), l.s.name, h("span", null, fnum(l.pts[l.pts.length - 1].v))))));
+}
+
+/* ── events & sinks ── */
+function Events() {
+  const ev = world.events.slice().reverse();
+  return h("div", { className: "scroll events" },
+    ev.length === 0 && h("div", { className: "empty" }, h("b", null, "No events."), " Rules firing, restarts, emitted events and chaos actions are listed here."),
+    ev.map((e, i) => h("div", { key: e.t + "-" + i + "-" + e.msg, className: "ev " + e.type }, h("time", null, timeStr(e.t)), h("span", { className: "tag" }, e.type), h("span", null, e.msg))));
+}
+function Sinks() {
+  const S = world.sinks, pk = Object.keys(S.prom), sk = Object.keys(S.statsd), fk = Object.keys(S.files);
+  if (!pk.length && !sk.length && !fk.length) return h("div", { className: "scroll" }, h("div", { className: "empty" }, h("b", null, "No sink output."), " Run the “Sinks” preset: streams piped into prometheus(), statsd() and file() show up here."));
+  return h("div", { className: "scroll sinks" },
+    pk.map(p => h("section", { key: "p" + p }, h("h3", null, "GET :" + p + "/metrics"), h("pre", { className: "dump" }, S.prom[p].text))),
+    sk.map(u => h("section", { key: "s" + u }, h("h3", null, "StatsD → " + u), h("pre", { className: "dump" }, S.statsd[u].slice(-40).join("\n")))),
+    fk.map(f => h("section", { key: "f" + f }, h("h3", null, f), h("pre", { className: "dump wrap" }, S.files[f].slice(-12).join("\n")))));
+}
+
+
+/* ── dashboard widgets ── */
+const fv = (v, o) => { if (v == null || !isFinite(v)) return "—"; const u = o && o.unit, s = o && o.dec != null ? v.toFixed(o.dec) : fnum(v); return u ? (u === "%" ? s + "%" : s + " " + u) : s; };
+const stc = s => s === "crit" ? "var(--bad)" : s === "warn" ? "var(--warn)" : "var(--ok)";
+function Line({ pts, color, w, hgt, fill }) {
+  const v = pts.filter(x => x != null); if (v.length < 2) return null;
+  const lo = Math.min(...v), hi = Math.max(...v), r = hi - lo || 1, n = pts.length;
+  const P = pts.map((x, i) => x == null ? null : [(i / (n - 1) * w).toFixed(1), (hgt - 2 - (x - lo) / r * (hgt - 4)).toFixed(1)]).filter(Boolean);
+  const d = P.map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join("");
+  return h("svg", { viewBox: "0 0 " + w + " " + hgt, preserveAspectRatio: "none", className: "wspark" },
+    fill && h("path", { d: d + "L" + w + " " + hgt + "L0 " + hgt + "Z", fill: color, opacity: .15 }),
+    h("path", { d, fill: "none", stroke: color, strokeWidth: 1.5, vectorEffect: "non-scaling-stroke", strokeLinejoin: "round" }));
+}
+function WStat({ d, o }) {
+  const c = stc(d.state);
+  return h("div", { className: "w-stat" }, h("div", { className: "big", style: { color: d.state === "ok" ? "var(--fg)" : c } }, fv(d.value, o)),
+    d.delta != null && h("div", { className: "delta", style: { color: Math.abs(d.delta) < 2 ? "var(--mut)" : d.delta > 0 ? "var(--warn)" : "var(--a)" } }, (d.delta > 0 ? "▲ " : "▼ ") + Math.abs(d.delta).toFixed(1) + "% over range"),
+    h(Line, { pts: d.series, color: c, w: 120, hgt: 34, fill: true }));
+}
+function WGauge({ d, o }) {
+  const f = d.value == null ? 0 : Math.max(0, Math.min(1, (d.value - d.min) / (d.max - d.min || 1))), cx = 70, cy = 66, r = 52, a = Math.PI + f * Math.PI;
+  const ex = cx + r * Math.cos(a), ey = cy + r * Math.sin(a);
+  return h("svg", { viewBox: "0 0 140 84", className: "wgauge", role: "img", "aria-label": "gauge " + fv(d.value, o) },
+    h("path", { d: "M" + (cx - r) + " " + cy + "A" + r + " " + r + " 0 0 1 " + (cx + r) + " " + cy, fill: "none", stroke: "var(--panel2)", strokeWidth: 12, strokeLinecap: "round" }),
+    f > 0 && h("path", { d: "M" + (cx - r) + " " + cy + "A" + r + " " + r + " 0 0 1 " + ex.toFixed(1) + " " + ey.toFixed(1), fill: "none", stroke: stc(d.state), strokeWidth: 12, strokeLinecap: "round" }),
+    h("text", { x: cx, y: cy - 6, textAnchor: "middle", className: "gv" }, fv(d.value, o)),
+    h("text", { x: cx - r, y: cy + 14, textAnchor: "middle", className: "ax" }, d.min), h("text", { x: cx + r, y: cy + 14, textAnchor: "middle", className: "ax" }, d.max));
+}
+function Plot({ d, o, area }) {
+  const W = 440, H = 180, L = 40, R = 6, T = 8, B = 20, stack = area && o.stack;
+  let S = d.series.map((s, i) => ({ name: s.name, c: COLORS[i % COLORS.length], pts: s.pts.filter(p => p.v != null) })).filter(s => s.pts.length);
+  if (!S.length) return h("div", { className: "empty sm" }, "No data in range");
+  if (stack) {
+    const ts = [...new Set(S.flatMap(s => s.pts.map(p => p.t)))].sort((a, b) => a - b), ms = S.map(s => new Map(s.pts.map(p => [p.t, p.v]))), acc = ts.map(() => 0);
+    S = S.map((s, i) => { const lo = acc.slice(); return Object.assign({}, s, { pts: ts.map((t, j) => { acc[j] += ms[i].get(t) || 0; return { t, v: acc[j], lo: lo[j] }; }) }); });
+  }
+  const ymax = niceMax(Math.max(1e-9, o.max != null ? o.max : 0, ...S.flatMap(s => s.pts.map(p => p.v))) * (o.max != null ? 1 : 1.08));
+  const X = t => L + (t - d.t0) / (d.t1 - d.t0) * (W - L - R), Y = v => T + (1 - v / ymax) * (H - T - B), tk = [0, .5, 1].map(f => f * ymax);
+  const path = s => s.pts.map((p, i) => (i ? "L" : "M") + X(p.t).toFixed(1) + " " + Y(p.v).toFixed(1)).join("");
+  return h("div", null, h("svg", { viewBox: "0 0 " + W + " " + H, className: "wplot" },
+    tk.map((v, i) => h("g", { key: i }, h("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), className: "grid-l" }), h("text", { x: L - 5, y: Y(v) + 4, textAnchor: "end", className: "ax" }, fnum(v)))),
+    [0, 1].map(i => h("text", { key: "x" + i, x: i ? W - R : L, y: H - 5, textAnchor: i ? "end" : "start", className: "ax" }, timeStr(Math.round(i ? d.t1 : d.t0)).slice(0, 5))),
+    S.slice().reverse().map(s => h("g", { key: s.name },
+      area && h("path", { d: stack ? path(s) + s.pts.slice().reverse().map(p => "L" + X(p.t).toFixed(1) + " " + Y(p.lo).toFixed(1)).join("") + "Z" : path(s) + "L" + X(s.pts[s.pts.length - 1].t) + " " + Y(0) + "L" + X(s.pts[0].t) + " " + Y(0) + "Z", fill: s.c, opacity: stack ? .55 : .18 }),
+      h("path", { d: path(s), fill: "none", stroke: s.c, strokeWidth: 1.6, strokeLinejoin: "round" })))),
+    o.legend !== false && S.length > 1 && h("div", { className: "wleg" }, S.slice(0, 8).map(s => h("span", { key: s.name }, h("i", { style: { background: s.c } }), s.name)), S.length > 8 && h("span", null, "+" + (S.length - 8))));
+}
+function WBar({ d, o }) {
+  const W = 440, H = 170, L = 40, B = 34, T = 8, n = d.labels.length, k = d.series.length;
+  const ymax = niceMax(Math.max(1e-9, ...d.series.flatMap(s => s.values.filter(v => v != null))) * 1.08), Y = v => T + (1 - v / ymax) * (H - T - B), bw = (W - L - 6) / Math.max(1, n);
+  return h("svg", { viewBox: "0 0 " + W + " " + H, className: "wplot" },
+    [0, .5, 1].map((f, i) => h("g", { key: i }, h("line", { x1: L, x2: W - 6, y1: Y(f * ymax), y2: Y(f * ymax), className: "grid-l" }), h("text", { x: L - 5, y: Y(f * ymax) + 4, textAnchor: "end", className: "ax" }, fnum(f * ymax)))),
+    d.labels.map((l, i) => h("g", { key: l },
+      d.series.map((s, j) => s.values[i] == null ? null : h("rect", { key: j, x: L + i * bw + bw * .12 + j * (bw * .76 / k), width: Math.max(1, bw * .76 / k - 1), y: Y(s.values[i]), height: Math.max(0, Y(0) - Y(s.values[i])), fill: COLORS[(k > 1 ? j : i) % COLORS.length], rx: 1.5 },
+        h("title", null, l + " · " + s.name + ": " + fv(s.values[i], o)))),
+      h("text", { x: L + i * bw + bw / 2, y: H - 20, textAnchor: "middle", className: "ax" }, l.length > 9 ? l.slice(0, 8) + "…" : l))),
+    k > 1 && d.series.map((s, j) => h("g", { key: s.name }, h("rect", { x: L + j * 70, y: H - 10, width: 8, height: 8, fill: COLORS[j % COLORS.length] }), h("text", { x: L + j * 70 + 12, y: H - 3, className: "ax" }, s.name))));
+}
+function WDonut({ d, o }) {
+  const r = 38, C = 2 * Math.PI * r; let off = 0;
+  return h("div", { className: "wdonut" }, h("svg", { viewBox: "0 0 100 100", width: 120, height: 120, role: "img" },
+    d.slices.map((s, i) => { const len = s.value / d.total * C, el = h("circle", { key: s.label, cx: 50, cy: 50, r, fill: "none", stroke: COLORS[i % COLORS.length], strokeWidth: 16, strokeDasharray: len.toFixed(2) + " " + (C - len).toFixed(2), strokeDashoffset: -off, transform: "rotate(-90 50 50)" }, h("title", null, s.label)); off += len; return el; }),
+    h("text", { x: 50, y: 54, textAnchor: "middle", className: "dv" }, fnum(d.total))),
+    h("ul", null, d.slices.map((s, i) => h("li", { key: s.label }, h("i", { style: { background: COLORS[i % COLORS.length] } }), h("span", null, s.label), h("em", null, (s.value / d.total * 100).toFixed(0) + "%")))));
+}
+function WTable({ d, o }) {
+  return h("div", { className: "wtbl" }, h("table", null, h("thead", null, h("tr", null, h("th", null, ""), d.cols.map(c => h("th", { key: c, className: "r" }, c)))),
+    h("tbody", null, d.rows.map(r => h("tr", { key: r.name }, h("td", null, r.name), d.cols.map(c => {
+      const co = d.colOpts[c], v = r.cells[c], col = r.st[c] === "ok" ? "var(--fg)" : stc(r.st[c]);
+      return h("td", { key: c, className: "r", style: { color: col } }, co.bar && v != null && h("i", { className: "cb", style: { width: Math.min(100, v / d.colMax[c] * 100) + "%", background: r.st[c] === "ok" ? "var(--a)" : stc(r.st[c]) } }), h("span", null, fv(v, co)));
+    }))))));
+}
+function WHeat({ d, o }) {
+  if (!d.rows.length) return h("div", { className: "empty sm" }, "No data in range");
+  const W = 440, lab = 64, ch = 16, cw = (W - lab) / d.times.length, H = d.rows.length * ch + 4, rg = d.max - d.min || 1;
+  return h("svg", { viewBox: "0 0 " + W + " " + H, className: "wplot" }, d.rows.map((n, i) => h("g", { key: n },
+    h("text", { x: lab - 6, y: i * ch + 12, textAnchor: "end", className: "ax" }, n.length > 10 ? n.slice(0, 9) + "…" : n),
+    d.cells[i].map((v, j) => v == null ? null : h("rect", { key: j, x: lab + j * cw, y: i * ch + 1, width: cw + .5, height: ch - 2, fill: "var(--acc)", opacity: .06 + .94 * Math.max(0, Math.min(1, (v - d.min) / rg)) }, h("title", null, n + " · " + timeStr(d.times[j]) + " · " + fv(v, o)))))));
+}
+function WGrid({ d, o }) { return h("div", { className: "wgrid" }, d.tiles.map(t => h("div", { key: t.name, className: "tile", style: { borderColor: t.state === "ok" ? "var(--line)" : stc(t.state), background: t.state === "ok" ? "var(--panel2)" : "color-mix(in srgb," + stc(t.state) + " 16%, transparent)" } }, h("b", null, t.name), h("span", null, fv(t.value, o))))); }
+function WTop({ d, o }) { return h("div", { className: "wtop" }, d.items.map(it => h("div", { key: it.name, className: "trow" }, h("span", { className: "tn" }, it.name), h("span", { className: "tt" }, h("i", { style: { width: Math.min(100, it.value / d.max * 100) + "%", background: it.state === "ok" ? "var(--a)" : stc(it.state) } })), h("span", { className: "tv" }, fv(it.value, o))))); }
+function WHist({ d, o }) {
+  const W = 440, H = 150, L = 6, B = 22, mx = Math.max(1, ...d.bins.map(b => b.n)), bw = (W - L * 2) / d.bins.length;
+  return h("div", null, h("svg", { viewBox: "0 0 " + W + " " + H, className: "wplot" }, d.bins.map((b, i) => h("g", { key: i }, h("rect", { x: L + i * bw + 1, y: (H - B) * (1 - b.n / mx), width: bw - 2, height: (H - B) * b.n / mx, fill: "var(--a)", rx: 1.5 }, h("title", null, fnum(b.lo) + "–" + fnum(b.hi) + ": " + b.n)),
+    i % 2 === 0 && h("text", { x: L + i * bw, y: H - 6, className: "ax" }, fnum(b.lo))))),
+    h("div", { className: "wleg" }, h("span", null, "p50 " + fv(d.p50, o)), h("span", null, "p95 " + fv(d.p95, o)), h("span", null, d.total + " samples")));
+}
+function WSparks({ d, o }) { return h("div", { className: "wsp" }, d.rows.map(r => h("div", { key: r.name, className: "srow" }, h("span", { className: "tn" }, r.name), h("span", { className: "sl" }, h(Line, { pts: r.pts, color: r.state === "ok" ? "var(--a)" : stc(r.state), w: 120, hgt: 22 })), h("span", { className: "tv", style: { color: r.state === "ok" ? "var(--fg)" : stc(r.state) } }, fv(r.value, o))))); }
+function WEvents({ d }) { return d.items.length ? h("div", { className: "wev" }, d.items.map((e, i) => h("div", { key: i, className: "ev " + e.type }, h("time", null, timeStr(e.t).slice(3)), h("span", { className: "tag" }, e.type), h("span", null, e.msg)))) : h("div", { className: "empty sm" }, "Quiet so far."); }
+function WText({ d }) {
+  const inl = s => s.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/).map((p, i) => p.startsWith("**") ? h("b", { key: i }, p.slice(2, -2)) : p.startsWith("*") && p.length > 2 ? h("em", { key: i }, p.slice(1, -1)) : p);
+  return h("div", { className: "wtext" }, d.body.split("\n").map((l, i) => l.startsWith("# ") ? h("h5", { key: i }, l.slice(2)) : l.startsWith("- ") ? h("div", { key: i, className: "li" }, h("i", null), h("span", null, inl(l.slice(2)))) : l ? h("p", { key: i }, inl(l)) : null));
+}
+function WKv({ d }) { return d.pairs.length ? h("dl", { className: "wkv" }, d.pairs.map(([k, v]) => h("div", { key: k }, h("dt", null, k), h("dd", null, typeof v === "number" ? fnum(v) : String(v))))) : h("div", { className: "empty sm" }, "Nothing to show."); }
+const WR = { stat: WStat, gauge: WGauge, line: Plot, area: p => h(Plot, Object.assign({}, p, { area: true })), bar: WBar, donut: WDonut, table: WTable, heatmap: WHeat, grid: WGrid, top: WTop, histogram: WHist, sparks: WSparks, events: WEvents, text: WText, kv: WKv };
+const WH = { line: 190, area: 190, bar: 190, heatmap: 150, histogram: 170 };
+function Widget({ w }) {
+  const R = WR[w.type], st = w.data && (w.data.state || ""), minH = w.o.h || WH[w.type];
+  return h("article", { className: "w w-" + w.type + (st === "crit" || st === "warn" ? " " + st : ""), style: { flex: w.span + " 1 " + (w.span / 12 * 100) + "%", minHeight: minH } },
+    h("header", { className: "w-h" }, h("b", null, w.title), w.o.desc && h("span", null, w.o.desc)),
+    h("div", { className: "w-b" }, w.error ? h("div", { className: "werr" }, w.error) : w.data ? h(R, { d: w.data, o: w.o }) : h("div", { className: "empty sm" }, "loading…")));
+}
+function Dashboard() {
+  const b = world.board, snap = b && b.dash.snap;
+  if (!b) return h("div", { className: "scroll" }, h("div", { className: "empty" }, h("b", null, "No dashboard yet."), " Define one with ", h("code", null, "dashboard(\"title\").row(stat(…), line(…)).show()"), " — open the Dashboards group in Presets."));
+  if (!snap) return h("div", { className: "scroll" }, h("div", { className: "empty" }, "Building “" + b.dash.title + "”…"));
+  return h("div", { className: "scroll dash" },
+    h("div", { className: "dh" }, h("h2", null, snap.title), h("span", { className: "when" }, "updated " + timeStr(snap.t)), h("div", { className: "sp" }),
+      snap.vars.map(v => h("label", { key: v.name, className: "dvar" }, v.name, h("select", { value: v.value, onChange: e => b.dash.setVar(v.name, e.target.value) }, v.options.map(o => h("option", { key: o, value: o }, o))))),
+      h("label", { className: "dvar" }, "range", h("select", { value: snap.range, onChange: e => b.dash.setRange(+e.target.value) }, snap.rangeOptions.map(r => h("option", { key: r, value: r }, r >= 3600 ? r / 3600 + "h" : r / 60 + "m"))))),
+    snap.rows.map((r, i) => r.section ? h("h3", { key: i, className: "dsec" }, r.section) : h("div", { key: i, className: "drow" }, r.widgets.map(w => h(Widget, { key: w.id, w })))));
+}
+
+/* ── app ── */
+function App() {
+  const [code, setCode] = useState(PRESETS[0].code), [pid, setPid] = useState(PRESETS[0].id), [open, setOpen] = useState(false);
+  const [tab, setTab] = useState("console"), [pane, setPane] = useState("code"), [speed, setSpeed] = useState(10), [playing, setPlaying] = useState(true);
+  const [status, setStatus] = useState({ k: "idle" }), [sel, setSel] = useState(null), [, force] = useState(0);
+  const runRef = useRef(0), speedRef = useRef(10), playRef = useRef(true);
+  speedRef.current = speed; playRef.current = playing;
+
+  useEffect(() => {
+    let acc = 0, busy = false;
+    const sim = setInterval(async () => {
+      if (busy || !playRef.current) return; busy = true;
+      try { acc += speedRef.current * .25; const n = Math.floor(acc); acc -= n; for (let i = 0; i < n; i++) { world.step(); await engine.tick(); } } finally { busy = false; }
+    }, 250);
+    const ui = setInterval(() => force(x => x + 1), 400);
+    return () => { clearInterval(sim); clearInterval(ui); };
+  }, []);
+
+  const run = useCallback(async (src, view) => {
+    const id = ++runRef.current, alive = () => runRef.current === id;
+    store.entries.length = 0; store.ver++;
+    const con = makeConsole(alive);
+    engine.onError = e => con.error("⚠ " + (e && e.message || e));
+    setStatus({ k: "run" }); if (view && narrow()) setPane("view"); if (/\bdashboard\(/.test(src)) setTab("dashboard");
+    const t0 = performance.now();
+    try { await runCode(src, con, alive); if (alive()) setStatus({ k: "ok", ms: Math.round(performance.now() - t0) }); }
+    catch (e) { if (alive()) { con.error((e && e.name && e.name !== "Error" ? e.name + ": " : "") + (e && e.message || e)); setStatus({ k: "err" }); } }
+  }, []);
+  const stop = () => { runRef.current++; engine.stopAll(); setStatus({ k: "stop" }); };
+  const pick = p => { setPid(p.id); setCode(p.code); setOpen(false); setTab("console"); run(p.code, true); };
+  const cur = PRESETS.find(p => p.id === pid);
+  const active = [...engine.items].filter(i => !i.hidden);
+  const groups = useMemo(() => { const g = []; PRESETS.forEach(p => { let x = g.find(y => y.n === p.group); if (!x) g.push(x = { n: p.group, l: [] }); x.l.push(p); }); return g; }, []);
+  const onRun = useCallback(() => run(codeRef.current, true), [run]);
+  const codeRef = useRef(code); codeRef.current = code;
+  const stTxt = status.k === "run" ? "running…" : status.k === "ok" ? "finished in " + status.ms + " ms" : status.k === "err" ? "stopped on error" : status.k === "stop" ? "stopped" : "ready";
+  const TABS = [["console", "Console"], ["fleet", "Fleet"], ["charts", "Charts"], ["events", "Events" + (world.events.length ? " " + world.events.length : "")], ["dashboard", "Dashboard" + (world.board ? " ●" : "")], ["sinks", "Sinks"]];
+
+  return h("div", { className: "app" },
+    h("header", { className: "top" },
+      h("div", { className: "brand" }, h("svg", { viewBox: "0 0 24 24", width: 20, height: 20, "aria-hidden": true }, h("rect", { x: 2, y: 8, width: 6, height: 5, fill: "var(--acc)" }), h("rect", { x: 9, y: 8, width: 6, height: 5, fill: "var(--a)" }), h("rect", { x: 16, y: 8, width: 6, height: 5, fill: "var(--bad)" }), h("rect", { x: 5.5, y: 14, width: 6, height: 5, fill: "var(--n)" }), h("rect", { x: 12.5, y: 14, width: 6, height: 5, fill: "var(--c)" })), h("span", null, "dockermetrics")),
+      h("button", { className: "btn", onClick: () => setOpen(o => !o), "aria-expanded": open }, "Presets"),
+      h("div", { className: "sp" }),
+      h("div", { className: "seg", role: "tablist" }, ["code", "view"].map(k => h("button", { key: k, role: "tab", "aria-selected": pane === k, className: pane === k ? "on" : "", onClick: () => setPane(k) }, k === "code" ? "Code" : "Simulation"))),
+      h("div", { className: "simctl" },
+        h("button", { className: "btn icon", onClick: () => setPlaying(p => !p), "aria-label": playing ? "Pause simulation" : "Resume simulation", title: playing ? "Pause" : "Resume" }, playing ? "❚❚" : "▶"),
+        h("select", { value: speed, onChange: e => setSpeed(+e.target.value), "aria-label": "Simulation speed" }, SPEEDS.map(s => h("option", { key: s, value: s }, s + "×"))),
+        h("span", { className: "clock", title: "simulated time" }, timeStr(world.t))),
+      active.length > 0 || status.k === "run" ? h("button", { className: "btn stop", onClick: stop }, "Stop") : null,
+      h("button", { className: "btn run", onClick: onRun, title: "Ctrl/⌘ + Enter" }, "Run")),
+    h("main", { className: "main" },
+      h("section", { className: "pane code-pane" + (pane === "view" ? " hide-m" : "") },
+        h("div", { className: "pane-h" }, h("span", { className: "file" }, (cur ? cur.id : "scratch") + ".js"), h("span", { className: "ttl" }, cur ? cur.title : ""),
+          h("button", { className: "btn sm ghost", onClick: () => cur && setCode(cur.code), disabled: !cur || code === cur.code }, "Revert")),
+        h(Editor, { value: code, onChange: setCode, onRun }),
+        h("div", { className: "hint" }, "Ctrl/⌘ + Enter to run · imports are optional · every name is already in scope")),
+      h("section", { className: "pane view-pane" + (pane === "code" ? " hide-m" : "") },
+        h("nav", { className: "tabs", role: "tablist" }, TABS.map(([k, l]) => h("button", { key: k, role: "tab", "aria-selected": tab === k, className: tab === k ? "on" : "", onClick: () => setTab(k) }, l))),
+        h("div", { className: "view" },
+          tab === "console" && h(Console), tab === "fleet" && h(Fleet, { sel, setSel }), tab === "charts" && h(Charts), tab === "events" && h(Events), tab === "dashboard" && h(Dashboard), tab === "sinks" && h(Sinks)),
+        h("footer", { className: "status" },
+          h("span", { className: "st " + status.k }, stTxt),
+          active.map((it, i) => h("span", { key: i, className: "chip" }, h("span", null, it.label), h("button", { "aria-label": "Stop " + it.label, onClick: () => it.stop() }, "×"))))),
+      open && h("div", { className: "scrim", onClick: () => setOpen(false) }),
+      open && h("aside", { className: "drawer", "aria-label": "Presets" },
+        groups.map(g => h("div", { key: g.n }, h("h4", null, g.n), g.l.map(p => h("button", { key: p.id, className: "pre" + (p.id === pid ? " on" : ""), onClick: () => pick(p) }, h("b", null, p.title), h("span", null, p.desc))))))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+setTimeout(() => document.getElementById("boot") && document.getElementById("boot").remove(), 0);
+})();
+</script>
+</body></html>

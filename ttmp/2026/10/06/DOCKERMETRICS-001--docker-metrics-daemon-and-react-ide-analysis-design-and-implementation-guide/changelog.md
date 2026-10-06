@@ -73,3 +73,7 @@ Add load mode (cpu/mem/leak/mixed) plus Dockerfile and docker-compose demo fleet
 ## 2026-10-06
 
 Backfill the implementation diary to the full investigation format (Steps 2-15) and record the deferral of the custom-dashboard JS API; reverted its partial implementation.
+
+## 2026-10-06
+
+Import the v2 prototype (dashboard DSL + widget interpreter) and add the v2 analysis/design/implementation guide.
